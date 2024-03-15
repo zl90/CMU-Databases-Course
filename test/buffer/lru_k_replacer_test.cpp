@@ -16,6 +16,29 @@
 
 namespace bustub {
 
+TEST(LRUKReplacerTest, SetEvictableTest) {
+  LRUKReplacer lru_replacer(7, 2);
+  lru_replacer.SetEvictable(0, true);
+  lru_replacer.SetEvictable(1, true);
+  lru_replacer.SetEvictable(2, true);
+  lru_replacer.SetEvictable(3, true);
+
+  ASSERT_EQ(lru_replacer.Size(), 4);
+
+  lru_replacer.SetEvictable(0, false);
+  lru_replacer.SetEvictable(1, false);
+  lru_replacer.SetEvictable(2, false);
+
+  ASSERT_EQ(lru_replacer.Size(), 1);
+
+  // SetEvictable should be idempotent
+  lru_replacer.SetEvictable(0, true);
+  lru_replacer.SetEvictable(0, true);
+  lru_replacer.SetEvictable(0, true);
+
+  ASSERT_EQ(lru_replacer.Size(), 2);
+}
+
 TEST(LRUKReplacerTest, DISABLED_SampleTest) {
   LRUKReplacer lru_replacer(7, 2);
 
