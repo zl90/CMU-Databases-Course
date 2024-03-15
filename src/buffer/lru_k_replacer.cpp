@@ -13,6 +13,7 @@
 // make lru_k_replacer_test -j$(nproc) && ./test/lru_k_replacer_test
 
 #include "buffer/lru_k_replacer.h"
+#include <chrono>
 #include <cstddef>
 #include "common/exception.h"
 
@@ -22,7 +23,17 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool { return false; }
 
-void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {}
+void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {
+  if (static_cast<size_t>(frame_id) > replacer_size_) {
+    throw Exception("Invalid frame_id");
+  }
+
+  auto now = std::chrono::system_clock::now();
+  auto duration = now.time_since_epoch();
+  auto milliseconds_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+
+  node_store_[frame_id].history_.emplace_back(static_cast<size_t>(milliseconds_since_epoch));
+}
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
   if (static_cast<size_t>(frame_id) > replacer_size_) {
