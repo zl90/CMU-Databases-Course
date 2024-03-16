@@ -36,7 +36,7 @@ class LRUKNode {
 
   std::list<size_t> history_;
   [[maybe_unused]] size_t k_;
-  [[maybe_unused]] frame_id_t fid_;
+  frame_id_t fid_;
   bool is_evictable_{false};
 };
 
@@ -90,8 +90,6 @@ class LRUKReplacer {
   auto Evict(frame_id_t *frame_id) -> bool;
 
   /**
-   * TODO(P1): Add implementation
-   *
    * @brief Record the event that the given frame id is accessed at current timestamp.
    * Create a new entry for access history if frame id has not been seen before.
    *

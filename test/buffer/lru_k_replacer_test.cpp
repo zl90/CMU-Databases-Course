@@ -18,6 +18,7 @@ namespace bustub {
 
 TEST(LRUKReplacerTest, SetEvictableTest) {
   LRUKReplacer lru_replacer(7, 2);
+
   lru_replacer.SetEvictable(0, true);
   lru_replacer.SetEvictable(1, true);
   lru_replacer.SetEvictable(2, true);
@@ -37,6 +38,29 @@ TEST(LRUKReplacerTest, SetEvictableTest) {
   lru_replacer.SetEvictable(0, true);
 
   ASSERT_EQ(lru_replacer.Size(), 2);
+}
+
+TEST(LRUKReplacerTest, RemoveTest) {
+  LRUKReplacer lru_replacer(7, 2);
+  lru_replacer.SetEvictable(0, true);
+  lru_replacer.SetEvictable(1, true);
+  lru_replacer.SetEvictable(2, true);
+  lru_replacer.SetEvictable(3, true);
+
+  ASSERT_EQ(lru_replacer.Size(), 4);
+
+  lru_replacer.RecordAccess(0);
+  lru_replacer.RecordAccess(0);
+  lru_replacer.RecordAccess(0);
+
+  lru_replacer.Remove(0);
+
+  ASSERT_EQ(lru_replacer.Size(), 3);
+
+  lru_replacer.SetEvictable(0, true);
+  lru_replacer.RecordAccess(0);
+
+  ASSERT_EQ(lru_replacer.Size(), 4);
 }
 
 TEST(LRUKReplacerTest, DISABLED_SampleTest) {

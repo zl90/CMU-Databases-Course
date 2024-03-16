@@ -15,17 +15,29 @@
 #include "buffer/lru_k_replacer.h"
 #include <chrono>
 #include <cstddef>
+#include <mutex>
 #include "common/exception.h"
+#include "fmt/format.h"
 
 namespace bustub {
 
-LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {}
+LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {
+  std::lock_guard<std::mutex> lock(latch_);
+
+  for (size_t i = 0; i < replacer_size_; i++) {
+    node_store_[i].fid_ = i;
+    node_store_[i].is_evictable_ = false;
+  }
+}
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool { return false; }
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {
-  if (static_cast<size_t>(frame_id) > replacer_size_) {
-    throw Exception("Invalid frame_id");
+  std::lock_guard<std::mutex> lock(latch_);
+
+  auto it = node_store_.find(frame_id);
+  if (it == node_store_.end()) {
+    throw Exception(fmt::format("Invalid frame_id. frame_id: {}", frame_id));
   }
 
   auto now = std::chrono::system_clock::now();
@@ -36,21 +48,42 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
-  if (static_cast<size_t>(frame_id) > replacer_size_) {
-    throw Exception("Invalid frame_id");
+  std::lock_guard<std::mutex> lock(latch_);
+
+  auto it = node_store_.find(frame_id);
+  if (it == node_store_.end()) {
+    throw Exception(fmt::format("Invalid frame_id. frame_id: {}", frame_id));
   }
 
   if (node_store_[frame_id].is_evictable_ && !set_evictable) {
-    node_store_[frame_id].is_evictable_ = set_evictable;
     curr_size_--;
   } else if (!node_store_[frame_id].is_evictable_ && set_evictable) {
-    node_store_[frame_id].is_evictable_ = set_evictable;
     curr_size_++;
   }
+
+  node_store_[frame_id].is_evictable_ = set_evictable;
 }
 
-void LRUKReplacer::Remove(frame_id_t frame_id) {}
+void LRUKReplacer::Remove(frame_id_t frame_id) {
+  std::lock_guard<std::mutex> lock(latch_);
 
-auto LRUKReplacer::Size() -> size_t { return curr_size_; }
+  auto it = node_store_.find(frame_id);
+  if (it == node_store_.end()) {
+    return;
+  }
+
+  if (!node_store_[frame_id].is_evictable_) {
+    throw Exception(fmt::format("Remove called on a non-evictable frame. frame_id: {}", frame_id));
+  }
+
+  node_store_[frame_id].history_.clear();
+  node_store_[frame_id].is_evictable_ = false;
+  curr_size_--;
+}
+
+auto LRUKReplacer::Size() -> size_t {
+  std::lock_guard<std::mutex> lock(latch_);
+  return curr_size_;
+}
 
 }  // namespace bustub
