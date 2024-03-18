@@ -6,12 +6,14 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <iostream>
 #include <memory>
 #include <random>
 #include <set>
 #include <thread>  // NOLINT
 #include <vector>
 
+#include "common/config.h"
 #include "gtest/gtest.h"
 
 namespace bustub {
@@ -63,7 +65,51 @@ TEST(LRUKReplacerTest, RemoveTest) {
   ASSERT_EQ(lru_replacer.Size(), 4);
 }
 
-TEST(LRUKReplacerTest, DISABLED_SampleTest) {
+TEST(LRUKReplacerTest, EvictInfiniteTest) {
+  LRUKReplacer lru_replacer(7, 2);
+  lru_replacer.SetEvictable(0, true);
+  lru_replacer.SetEvictable(1, true);
+  lru_replacer.SetEvictable(2, true);
+  lru_replacer.SetEvictable(3, true);
+
+  lru_replacer.RecordAccess(3);
+  lru_replacer.RecordAccess(3);
+  lru_replacer.RecordAccess(3);
+
+  ASSERT_EQ(lru_replacer.Size(), 4);
+
+  int fid;
+  bool eviction_result = lru_replacer.Evict(&fid);
+
+  ASSERT_EQ(eviction_result, true);
+  ASSERT_EQ(fid, 0);
+  ASSERT_EQ(lru_replacer.Size(), 3);
+}
+
+TEST(LRUKReplacerTest, EvictTest) {
+  LRUKReplacer lru_replacer(7, 2);
+  lru_replacer.SetEvictable(2, true);
+  lru_replacer.SetEvictable(3, true);
+
+  for (int i = 0; i < 3; i++) {
+    lru_replacer.RecordAccess(2);
+  }
+
+  for (int i = 0; i < 3; i++) {
+    lru_replacer.RecordAccess(3);
+  }
+
+  ASSERT_EQ(lru_replacer.Size(), 2);
+
+  int fid;
+  bool eviction_result = lru_replacer.Evict(&fid);
+
+  ASSERT_EQ(eviction_result, true);
+  ASSERT_EQ(fid, 2);
+  ASSERT_EQ(lru_replacer.Size(), 1);
+}
+
+TEST(LRUKReplacerTest, SampleTest) {
   LRUKReplacer lru_replacer(7, 2);
 
   // Scenario: add six elements to the replacer. We have [1,2,3,4,5]. Frame 6 is non-evictable.
