@@ -21,6 +21,7 @@
 #include <optional>
 #include "common/config.h"
 #include "common/exception.h"
+#include "fmt/core.h"
 #include "fmt/format.h"
 
 namespace bustub {
@@ -31,7 +32,6 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
   for (size_t i = 0; i < replacer_size_; i++) {
     node_store_[i].fid_ = i;
     node_store_[i].is_evictable_ = false;
-    node_store_[i].history_.emplace_back(GetCurrentTimestamp());
   }
 }
 
@@ -50,8 +50,7 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   std::unordered_map<frame_id_t, LRUKNode> evictable_frames;
 
   for (const auto &[curr_frame_id, curr_node] : node_store_) {
-    const bool is_evictable = curr_node.is_evictable_;
-    if (is_evictable) {
+    if (curr_node.is_evictable_) {
       const bool is_infinite_k = curr_node.history_.size() < k_;
 
       if (is_infinite_k) {
@@ -63,16 +62,16 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   }
 
   if (!evictable_frames_infinite.empty()) {
-    auto first_node = evictable_frames_infinite.begin();
-    auto earliest_timestamp = first_node->second.history_.back();
-    auto eviction_candidate_id = first_node->first;
+    auto first_node = evictable_frames_infinite.begin()->second;
+    auto earliest_timestamp = first_node.history_.back();
+    auto eviction_candidate_id = first_node.fid_;
 
-    for (const auto &[key, value] : evictable_frames_infinite) {
-      auto latest_access_timestamp = value.history_.back();
+    for (const auto &[curr_frame_id, curr_node] : evictable_frames_infinite) {
+      auto latest_access_timestamp = curr_node.history_.back();
 
       if (latest_access_timestamp < earliest_timestamp) {
         earliest_timestamp = latest_access_timestamp;
-        eviction_candidate_id = value.fid_;
+        eviction_candidate_id = curr_frame_id;
       }
     }
 
@@ -84,18 +83,18 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   }
 
   if (!evictable_frames.empty()) {
-    auto first_node = evictable_frames.begin();
+    auto first_node = evictable_frames.begin()->second;
 
-    auto it = first_node->second.history_.begin();
-    std::advance(it, first_node->second.history_.size() - k_);
+    auto it = first_node.history_.begin();
+    std::advance(it, first_node.history_.size() - k_);
 
     auto value_at_kth_previous_access = *it;
     auto largest_backward_k = GetCurrentTimestamp() - value_at_kth_previous_access;
-    auto eviction_candidate_id = first_node->first;
+    auto eviction_candidate_id = first_node.fid_;
 
-    for (const auto &[key, value] : evictable_frames) {
-      auto it = value.history_.begin();
-      std::advance(it, value.history_.size() - k_);
+    for (const auto &[curr_frame_id, curr_node] : evictable_frames) {
+      auto it = curr_node.history_.begin();
+      std::advance(it, curr_node.history_.size() - k_);
 
       auto value_at_kth_previous_access = *it;
 
@@ -103,7 +102,7 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 
       if (current_backward_k > largest_backward_k) {
         largest_backward_k = current_backward_k;
-        eviction_candidate_id = value.fid_;
+        eviction_candidate_id = curr_frame_id;
       }
     }
 
@@ -125,9 +124,9 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
     throw Exception(fmt::format("Invalid frame_id. frame_id: {}", frame_id));
   }
 
-  auto milliseconds_since_epoch = GetCurrentTimestamp();
+  auto current_timestamp = GetCurrentTimestamp();
 
-  node_store_[frame_id].history_.emplace_back(static_cast<size_t>(milliseconds_since_epoch));
+  node_store_[frame_id].history_.emplace_back(current_timestamp);
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
