@@ -38,9 +38,9 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
 auto LRUKReplacer::GetCurrentTimestamp() -> size_t {
   auto now = std::chrono::system_clock::now();
   auto duration = now.time_since_epoch();
-  auto milliseconds_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+  auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 
-  return static_cast<size_t>(milliseconds_since_epoch);
+  return static_cast<size_t>(microseconds);
 }
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
@@ -89,7 +89,10 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
     std::advance(it, first_node.history_.size() - k_);
 
     auto value_at_kth_previous_access = *it;
-    auto largest_backward_k = GetCurrentTimestamp() - value_at_kth_previous_access;
+
+    auto current_timestamp = GetCurrentTimestamp();
+
+    auto largest_backward_k = current_timestamp - value_at_kth_previous_access;
     auto eviction_candidate_id = first_node.fid_;
 
     for (const auto &[curr_frame_id, curr_node] : evictable_frames) {
@@ -98,7 +101,9 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 
       auto value_at_kth_previous_access = *it;
 
-      auto current_backward_k = GetCurrentTimestamp() - value_at_kth_previous_access;
+      auto current_timestamp = GetCurrentTimestamp();
+
+      auto current_backward_k = current_timestamp - value_at_kth_previous_access;
 
       if (current_backward_k > largest_backward_k) {
         largest_backward_k = current_backward_k;
