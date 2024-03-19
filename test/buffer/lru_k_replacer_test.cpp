@@ -173,13 +173,11 @@ TEST(LRUKReplacerTest, SampleTest) {
   ASSERT_EQ(3, lru_replacer.Size());
 
   // Now we have [1,5,4]. Continue looking for victims.
-  std::cout << "..............................1\n";
   lru_replacer.SetEvictable(1, false);
   ASSERT_EQ(2, lru_replacer.Size());
   ASSERT_EQ(true, lru_replacer.Evict(&value));
   ASSERT_EQ(5, value);
   ASSERT_EQ(1, lru_replacer.Size());
-  std::cout << "..............................2\n";
 
   // Update access history for 1. Now we have [4,1]. Next victim is 4.
   lru_replacer.RecordAccess(1);
@@ -188,13 +186,11 @@ TEST(LRUKReplacerTest, SampleTest) {
   ASSERT_EQ(2, lru_replacer.Size());
   ASSERT_EQ(true, lru_replacer.Evict(&value));
   ASSERT_EQ(value, 4);
-  std::cout << "..............................3\n";
 
   ASSERT_EQ(1, lru_replacer.Size());
   lru_replacer.Evict(&value);
   ASSERT_EQ(value, 1);
   ASSERT_EQ(0, lru_replacer.Size());
-  std::cout << "..............................4\n";
 
   // This operation should not modify size
   ASSERT_EQ(false, lru_replacer.Evict(&value));
