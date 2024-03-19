@@ -15,10 +15,8 @@
 #include "buffer/lru_k_replacer.h"
 #include <chrono>
 #include <cstddef>
-#include <iostream>
 #include <iterator>
 #include <mutex>
-#include <optional>
 #include "common/config.h"
 #include "common/exception.h"
 #include "fmt/core.h"
