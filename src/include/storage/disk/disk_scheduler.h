@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// make disk_manager_test -j$(nproc) && ./test/disk_manager_test
+
 #pragma once
 
 #include <future>  // NOLINT
