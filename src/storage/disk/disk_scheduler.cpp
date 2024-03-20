@@ -13,6 +13,7 @@
 // make disk_scheduler_test -j$(nproc) && ./test/disk_scheduler_test
 
 #include "storage/disk/disk_scheduler.h"
+#include <optional>
 #include "common/exception.h"
 #include "storage/disk/disk_manager.h"
 
@@ -37,6 +38,9 @@ void DiskScheduler::StartWorkerThread() {
   while (true) {
     try {
       auto disk_request = request_queue_.Get();
+      if (disk_request == std::nullopt) {
+        break;
+      }
 
       if (disk_request.has_value()) {
         if (disk_request->is_write_) {
@@ -47,7 +51,6 @@ void DiskScheduler::StartWorkerThread() {
 
         disk_request->callback_.set_value(true);
       }
-
     } catch (...) {
       throw Exception("Error: disk I/O operation failed.");
     }
