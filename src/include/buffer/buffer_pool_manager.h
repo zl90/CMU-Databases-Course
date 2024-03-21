@@ -86,8 +86,6 @@ class BufferPoolManager {
   auto NewPageGuarded(page_id_t *page_id) -> BasicPageGuard;
 
   /**
-   * TODO(P1): Add implementation
-   *
    * @brief Fetch the requested page from the buffer pool. Return nullptr if page_id needs to be fetched from the disk
    * but all frames are currently in use and not evictable (in another word, pinned).
    *
