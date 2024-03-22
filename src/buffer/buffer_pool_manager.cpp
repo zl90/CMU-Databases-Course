@@ -201,7 +201,34 @@ auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unus
   return false;
 }
 
-auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool { return false; }
+auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
+  std::lock_guard<std::mutex> lock(latch_);
+
+  if (page_id == INVALID_PAGE_ID) {
+    throw Exception("Cannot Flush INVALID_PAGE_ID");
+    return false;
+  }
+
+  for (size_t i = 0; i < pool_size_; i++) {
+    if (pages_[i].page_id_ == page_id) {
+      auto data = pages_[i].data_;
+      auto promise = disk_scheduler_->CreatePromise();
+      auto future = promise.get_future();
+      DiskRequest r = {true, data, pages_[i].page_id_, std::move(promise)};
+      disk_scheduler_->Schedule(std::move(r));
+
+      if (!future.get()) {
+        throw Exception("Disk I/O error occurred.");
+        return false;
+      }
+
+      pages_[i].is_dirty_ = false;
+      return true;
+    }
+  }
+
+  return false;
+}
 
 void BufferPoolManager::FlushAllPages() {}
 
