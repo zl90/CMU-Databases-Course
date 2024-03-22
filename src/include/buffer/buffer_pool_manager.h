@@ -53,8 +53,6 @@ class BufferPoolManager {
   auto GetPages() -> Page * { return pages_; }
 
   /**
-   * TODO(P1): Add implementation
-   *
    * @brief Create a new page in the buffer pool. Set page_id to the new page's id, or nullptr if all frames
    * are currently in use and not evictable (in another word, pinned).
    *

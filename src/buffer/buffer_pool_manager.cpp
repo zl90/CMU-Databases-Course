@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// make buffer_pool_manager_test -j$(nproc) && ./test/buffer_pool_manager_test
+
 #include "buffer/buffer_pool_manager.h"
 #include <cstddef>
 #include <mutex>
@@ -37,7 +39,68 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
 
 BufferPoolManager::~BufferPoolManager() { delete[] pages_; }
 
-auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * { return nullptr; }
+auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
+  std::lock_guard<std::mutex> lock(latch_);
+
+  if (!free_list_.empty()) {
+    auto free_frame_id = free_list_.front();
+    free_list_.pop_front();
+
+    char data[BUSTUB_PAGE_SIZE] = {0};
+
+    replacer_->RecordAccess(free_frame_id);
+    replacer_->SetEvictable(free_frame_id, false);
+
+    auto new_page_id = AllocatePage();
+    *page_id = new_page_id;
+
+    pages_[free_frame_id].ResetMemory();
+    pages_[free_frame_id].data_ = data;
+    pages_[free_frame_id].pin_count_ = 1;
+    pages_[free_frame_id].is_dirty_ = false;
+    pages_[free_frame_id].page_id_ = new_page_id;
+
+    return &pages_[free_frame_id];
+  }
+
+  frame_id_t evicted_frame_id;
+  auto is_frame_evicted = replacer_->Evict(&evicted_frame_id);
+
+  if (is_frame_evicted) {
+    auto is_old_page_dirty = pages_[evicted_frame_id].is_dirty_;
+    if (is_old_page_dirty) {
+      auto data = pages_[evicted_frame_id].data_;
+      auto promise = disk_scheduler_->CreatePromise();
+      auto future = promise.get_future();
+      DiskRequest r = {true, data, pages_[evicted_frame_id].page_id_, std::move(promise)};
+      disk_scheduler_->Schedule(std::move(r));
+
+      if (!future.get()) {
+        throw Exception("Disk I/O error occurred.");
+        return nullptr;
+      }
+    }
+
+    char data[BUSTUB_PAGE_SIZE] = {0};
+
+    replacer_->RecordAccess(evicted_frame_id);
+    replacer_->SetEvictable(evicted_frame_id, false);
+
+    auto new_page_id = AllocatePage();
+    *page_id = new_page_id;
+
+    pages_[evicted_frame_id].ResetMemory();
+    pages_[evicted_frame_id].data_ = data;
+    pages_[evicted_frame_id].pin_count_ = 1;
+    pages_[evicted_frame_id].is_dirty_ = false;
+    pages_[evicted_frame_id].page_id_ = new_page_id;
+
+    return &pages_[evicted_frame_id];
+  }
+
+  page_id = nullptr;
+  return nullptr;
+}
 
 auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType access_type) -> Page * {
   std::lock_guard<std::mutex> lock(latch_);
