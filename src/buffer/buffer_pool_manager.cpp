@@ -183,6 +183,21 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
 }
 
 auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unused]] AccessType access_type) -> bool {
+  std::lock_guard<std::mutex> lock(latch_);
+
+  for (size_t i = 0; i < pool_size_; i++) {
+    if (pages_[i].page_id_ == page_id && pages_[i].pin_count_ > 0) {
+      pages_[i].is_dirty_ |= is_dirty;
+      pages_[i].pin_count_--;
+
+      if (pages_[i].pin_count_ == 0) {
+        replacer_->SetEvictable(i, true);
+      }
+
+      return true;
+    }
+  }
+
   return false;
 }
 
