@@ -204,11 +204,6 @@ auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unus
 auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
   std::lock_guard<std::mutex> lock(latch_);
 
-  if (page_id == INVALID_PAGE_ID) {
-    throw Exception("Cannot Flush INVALID_PAGE_ID");
-    return false;
-  }
-
   for (size_t i = 0; i < pool_size_; i++) {
     if (pages_[i].page_id_ == page_id) {
       auto data = pages_[i].data_;
