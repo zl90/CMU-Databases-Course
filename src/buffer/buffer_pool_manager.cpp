@@ -60,12 +60,13 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
   auto page = &pages_[frame_id];
 
   if (page->is_dirty_) {
-    auto promise = disk_scheduler_->CreatePromise();
-    auto future = promise.get_future();
+    auto promise_shared = std::make_shared<std::promise<bool>>();
+    auto future = promise_shared->get_future();
 
-    disk_scheduler_->Schedule({true, page->data_, page->page_id_, std::move(promise)});
+    disk_scheduler_->Schedule({true, page->data_, page->page_id_, std::move(*promise_shared)});
+    auto is_disk_operation_successful = future.get();
 
-    if (!future.get()) {
+    if (!is_disk_operation_successful) {
       *page_id = INVALID_PAGE_ID;
       throw Exception("Failed to write page to disk");
     }
@@ -114,27 +115,29 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   auto page = &pages_[frame_id];
 
   if (page->IsDirty()) {
-    auto promise = disk_scheduler_->CreatePromise();
-    auto future = promise.get_future();
+    auto promise_shared = std::make_shared<std::promise<bool>>();
+    auto future = promise_shared->get_future();
 
-    disk_scheduler_->Schedule({true, page->GetData(), page->GetPageId(), std::move(promise)});
+    disk_scheduler_->Schedule({true, page->GetData(), page->GetPageId(), std::move(*promise_shared)});
+    auto is_disk_operation_successful = future.get();
 
-    if (!future.get()) {
-      throw Exception("Failed to write page to disk");
+    if (!is_disk_operation_successful) {
+      throw Exception("Failed to read page from disk");
     }
   }
 
   page_table_.erase(page->GetPageId());
   page_table_[page_id] = frame_id;
 
-  auto promise = disk_scheduler_->CreatePromise();
-  auto future = promise.get_future();
+  auto promise_shared = std::make_shared<std::promise<bool>>();
+  auto future = promise_shared->get_future();
 
   auto buffer = page->GetData();
 
-  disk_scheduler_->Schedule({false, buffer, page_id, std::move(promise)});
+  disk_scheduler_->Schedule({false, buffer, page_id, std::move(*promise_shared)});
+  auto is_disk_operation_successful = future.get();
 
-  if (!future.get()) {
+  if (!is_disk_operation_successful) {
     throw Exception("Failed to read page from disk");
   }
 
@@ -184,13 +187,14 @@ auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
   auto frame_id = it->second;
   auto page = &pages_[frame_id];
 
-  auto promise = disk_scheduler_->CreatePromise();
-  auto future = promise.get_future();
+  auto promise_shared = std::make_shared<std::promise<bool>>();
+  auto future = promise_shared->get_future();
 
-  disk_scheduler_->Schedule({true, page->GetData(), page->GetPageId(), std::move(promise)});
+  disk_scheduler_->Schedule({true, page->GetData(), page->GetPageId(), std::move(*promise_shared)});
+  auto is_disk_operation_successful = future.get();
 
-  if (!future.get()) {
-    throw Exception("Failed to write page to disk");
+  if (!is_disk_operation_successful) {
+    throw Exception("Failed to read page from disk");
   }
 
   page->is_dirty_ = false;
@@ -204,12 +208,13 @@ void BufferPoolManager::FlushAllPages() {
   for (auto [page_id, frame_id] : page_table_) {
     auto page = &pages_[frame_id];
 
-    auto promise = disk_scheduler_->CreatePromise();
+    auto promise_shared = std::make_shared<std::promise<bool>>();
+    auto future = promise_shared->get_future();
 
-    disk_scheduler_->Schedule({true, page->GetData(), page->GetPageId(), std::move(promise)});
-    auto future = promise.get_future();
+    disk_scheduler_->Schedule({true, page->GetData(), page->GetPageId(), std::move(*promise_shared)});
+    auto is_disk_operation_successful = future.get();
 
-    if (!future.get()) {
+    if (!is_disk_operation_successful) {
       throw Exception("Failed to read page from disk");
     }
 
