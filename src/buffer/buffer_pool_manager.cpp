@@ -54,6 +54,8 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
     auto new_page_id = AllocatePage();
     *page_id = new_page_id;
 
+    page_table_[new_page_id] = free_frame_id;
+
     pages_[free_frame_id].ResetMemory();
     pages_[free_frame_id].data_ = data;
     pages_[free_frame_id].pin_count_ = 1;
@@ -77,8 +79,11 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
 
       if (!future.get()) {
         throw Exception("Disk I/O error occurred.");
+        *page_id = INVALID_PAGE_ID;
         return nullptr;
       }
+
+      page_table_.erase(pages_[evicted_frame_id].page_id_);
     }
 
     char data[BUSTUB_PAGE_SIZE] = {0};
@@ -88,6 +93,8 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
 
     auto new_page_id = AllocatePage();
     *page_id = new_page_id;
+
+    page_table_[new_page_id] = evicted_frame_id;
 
     pages_[evicted_frame_id].ResetMemory();
     pages_[evicted_frame_id].data_ = data;
