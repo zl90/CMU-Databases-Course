@@ -140,13 +140,12 @@ class LRUKReplacer {
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
 
-  auto GetCurrentTimestamp() -> size_t;
-
   std::unordered_map<frame_id_t, LRUKNode> node_store_;
   size_t curr_size_{0};
   size_t replacer_size_;
   size_t k_;
   std::mutex latch_;
+  size_t current_timestamp_{0};
 };
 
 }  // namespace bustub

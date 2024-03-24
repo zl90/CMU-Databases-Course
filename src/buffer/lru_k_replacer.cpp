@@ -33,16 +33,10 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
   }
 }
 
-auto LRUKReplacer::GetCurrentTimestamp() -> size_t {
-  auto now = std::chrono::system_clock::now();
-  auto duration = now.time_since_epoch();
-  auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-
-  return static_cast<size_t>(nanoseconds);
-}
-
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   std::lock_guard<std::mutex> lock(latch_);
+
+  current_timestamp_++;
 
   if (node_store_.empty()) {
     return false;
@@ -92,9 +86,7 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 
     auto value_at_kth_previous_access = *it;
 
-    auto current_timestamp = GetCurrentTimestamp();
-
-    auto largest_backward_k = current_timestamp - value_at_kth_previous_access;
+    auto largest_backward_k = current_timestamp_ - value_at_kth_previous_access;
     auto eviction_candidate_id = first_node.fid_;
 
     for (const auto &[curr_frame_id, curr_node] : evictable_frames) {
@@ -103,9 +95,7 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 
       auto value_at_kth_previous_access = *it;
 
-      auto current_timestamp = GetCurrentTimestamp();
-
-      auto current_backward_k = current_timestamp - value_at_kth_previous_access;
+      auto current_backward_k = current_timestamp_ - value_at_kth_previous_access;
 
       if (current_backward_k > largest_backward_k) {
         largest_backward_k = current_backward_k;
@@ -126,18 +116,20 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {
   std::lock_guard<std::mutex> lock(latch_);
 
+  current_timestamp_++;
+
   auto it = node_store_.find(frame_id);
   if (it == node_store_.end()) {
     throw Exception(fmt::format("Invalid frame_id. frame_id: {}", frame_id));
   }
 
-  auto current_timestamp = GetCurrentTimestamp();
-
-  node_store_[frame_id].history_.emplace_back(current_timestamp);
+  node_store_[frame_id].history_.emplace_back(current_timestamp_);
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
   std::lock_guard<std::mutex> lock(latch_);
+
+  current_timestamp_++;
 
   auto it = node_store_.find(frame_id);
   if (it == node_store_.end()) {
@@ -155,6 +147,8 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
 
 void LRUKReplacer::Remove(frame_id_t frame_id) {
   std::lock_guard<std::mutex> lock(latch_);
+
+  current_timestamp_++;
 
   auto it = node_store_.find(frame_id);
   if (it == node_store_.end()) {
