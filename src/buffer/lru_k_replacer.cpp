@@ -36,15 +36,19 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
 auto LRUKReplacer::GetCurrentTimestamp() -> size_t {
   auto now = std::chrono::system_clock::now();
   auto duration = now.time_since_epoch();
-  auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+  auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
 
-  return static_cast<size_t>(microseconds);
+  return static_cast<size_t>(nanoseconds);
 }
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   std::lock_guard<std::mutex> lock(latch_);
 
-  std::unordered_map<frame_id_t, LRUKNode> evictable_frames_infinite;
+  if (node_store_.empty()) {
+    return false;
+  }
+
+  std::unordered_map<frame_id_t, LRUKNode> frames_with_infinite_k_distance;
   std::unordered_map<frame_id_t, LRUKNode> evictable_frames;
 
   for (const auto &[curr_frame_id, curr_node] : node_store_) {
@@ -52,19 +56,19 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
       const bool is_infinite_k = curr_node.history_.size() < k_;
 
       if (is_infinite_k) {
-        evictable_frames_infinite[curr_frame_id] = curr_node;
+        frames_with_infinite_k_distance[curr_frame_id] = curr_node;
       } else {
         evictable_frames[curr_frame_id] = curr_node;
       }
     }
   }
 
-  if (!evictable_frames_infinite.empty()) {
-    auto first_node = evictable_frames_infinite.begin()->second;
-    auto earliest_timestamp = first_node.history_.back();
+  if (!frames_with_infinite_k_distance.empty()) {
+    auto first_node = frames_with_infinite_k_distance.begin()->second;
+    auto earliest_timestamp = first_node.history_.front();
     auto eviction_candidate_id = first_node.fid_;
 
-    for (const auto &[curr_frame_id, curr_node] : evictable_frames_infinite) {
+    for (const auto &[curr_frame_id, curr_node] : frames_with_infinite_k_distance) {
       auto latest_access_timestamp = curr_node.history_.back();
 
       if (latest_access_timestamp < earliest_timestamp) {
@@ -74,8 +78,8 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
     }
 
     *frame_id = eviction_candidate_id;
-    node_store_[*frame_id].history_.clear();
-    node_store_[*frame_id].is_evictable_ = false;
+    node_store_[eviction_candidate_id].history_.clear();
+    node_store_[eviction_candidate_id].is_evictable_ = false;
     curr_size_--;
     return true;
   }
@@ -110,8 +114,8 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
     }
 
     *frame_id = eviction_candidate_id;
-    node_store_[*frame_id].history_.clear();
-    node_store_[*frame_id].is_evictable_ = false;
+    node_store_[eviction_candidate_id].history_.clear();
+    node_store_[eviction_candidate_id].is_evictable_ = false;
     curr_size_--;
     return true;
   }

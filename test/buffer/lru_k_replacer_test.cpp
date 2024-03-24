@@ -115,6 +115,82 @@ TEST(LRUKReplacerTest, EvictTest) {
   ASSERT_EQ(lru_replacer.Size(), 1);
 }
 
+TEST(LRUKReplacer, EvictTest) {
+  LRUKReplacer lru_replacer(10, 3);
+
+  lru_replacer.RecordAccess(1);
+  lru_replacer.RecordAccess(2);
+  lru_replacer.RecordAccess(3);
+  lru_replacer.RecordAccess(4);
+  lru_replacer.RecordAccess(1);
+  lru_replacer.RecordAccess(2);
+  lru_replacer.RecordAccess(3);
+  lru_replacer.RecordAccess(1);
+  lru_replacer.RecordAccess(2);
+
+  lru_replacer.SetEvictable(1, true);
+  lru_replacer.SetEvictable(2, true);
+  lru_replacer.SetEvictable(3, true);
+  lru_replacer.SetEvictable(4, true);
+
+  int value;
+  lru_replacer.Evict(&value);
+  ASSERT_EQ(3, value);
+}
+
+TEST(LRUKReplacer, BigEvictTest) {
+  LRUKReplacer lru_replacer(1000, 3);
+
+  for (int i = 0; i < 1000; i++) {
+    lru_replacer.RecordAccess(i);
+    lru_replacer.SetEvictable(i, true);
+  }
+  for (int i = 250; i < 1000; i++) {
+    lru_replacer.RecordAccess(i);
+    lru_replacer.SetEvictable(i, true);
+  }
+  for (int i = 500; i < 1000; i++) {
+    lru_replacer.RecordAccess(i);
+    lru_replacer.SetEvictable(i, true);
+  }
+  for (int i = 750; i < 1000; i++) {
+    lru_replacer.RecordAccess(i);
+    lru_replacer.SetEvictable(i, true);
+  }
+
+  for (int i = 250; i < 500; i++) {
+    lru_replacer.SetEvictable(i, false);
+  }
+
+  for (int i = 0; i < 100; i++) {
+    lru_replacer.Remove(i);
+  }
+
+  int value;
+  for (int i = 100; i < 250; i++) {
+    lru_replacer.Evict(&value);
+    ASSERT_EQ(i, value);
+  }
+  for (int i = 500; i < 600; i++) {
+    lru_replacer.Evict(&value);
+    ASSERT_EQ(i, value);
+  }
+
+  for (int i = 250; i < 500; i++) {
+    lru_replacer.SetEvictable(i, true);
+  }
+
+  for (int i = 600; i < 750; i++) {
+    lru_replacer.RecordAccess(i);
+    lru_replacer.RecordAccess(i);
+  }
+
+  for (int i = 250; i < 500; i++) {
+    lru_replacer.Evict(&value);
+    ASSERT_EQ(i, value);
+  }
+}
+
 TEST(LRUKReplacerTest, SampleTest) {
   LRUKReplacer lru_replacer(7, 2);
 
