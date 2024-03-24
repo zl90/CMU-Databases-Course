@@ -69,7 +69,7 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
     auto eviction_candidate_id = first_node.fid_;
 
     for (const auto &[curr_frame_id, curr_node] : frames_with_infinite_k_distance) {
-      auto latest_access_timestamp = curr_node.history_.back();
+      auto latest_access_timestamp = curr_node.history_.front();
 
       if (latest_access_timestamp < earliest_timestamp) {
         earliest_timestamp = latest_access_timestamp;
