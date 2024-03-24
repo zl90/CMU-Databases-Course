@@ -163,10 +163,15 @@ auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unus
     return false;
   }
 
-  page->is_dirty_ |= is_dirty;
+  if (is_dirty) {
+    page->is_dirty_ = is_dirty;
+  }
+
   page->pin_count_--;
 
-  replacer_->SetEvictable(frame_id, true);
+  if (page->pin_count_ == 0) {
+    replacer_->SetEvictable(frame_id, true);
+  }
 
   return true;
 }
