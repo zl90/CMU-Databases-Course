@@ -150,13 +150,11 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
 
   current_timestamp_++;
 
-  auto it = node_store_.find(frame_id);
-  if (it == node_store_.end()) {
+  if (node_store_.find(frame_id) == node_store_.end()) {
     return;
   }
 
   if (!node_store_[frame_id].is_evictable_) {
-    throw Exception(fmt::format("Remove called on a non-evictable frame. frame_id: {}", frame_id));
     return;
   }
 
