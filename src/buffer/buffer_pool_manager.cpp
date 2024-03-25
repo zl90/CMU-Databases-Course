@@ -14,6 +14,7 @@
 
 #include "buffer/buffer_pool_manager.h"
 #include <cstddef>
+#include <memory>
 #include <mutex>
 
 #include "common/config.h"
@@ -92,11 +93,11 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
 
   frame_id_t frame_id;
 
-  auto it = page_table_.find(page_id);
-
-  if (it != page_table_.end()) {
+  if (page_table_.find(page_id) != page_table_.end()) {
     frame_id = page_table_[page_id];
     auto page = &pages_[frame_id];
+    page->pin_count_++;
+    replacer_->SetEvictable(frame_id, false);
     return page;
   }
 
@@ -122,7 +123,7 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
     auto is_disk_operation_successful = future.get();
 
     if (!is_disk_operation_successful) {
-      throw Exception("Failed to read page from disk");
+      throw Exception("Failed to write page to disk");
     }
   }
 
@@ -132,15 +133,17 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   auto promise_shared = std::make_shared<std::promise<bool>>();
   auto future = promise_shared->get_future();
 
-  auto buffer = page->GetData();
+  auto data = std::make_unique<char[]>(BUSTUB_PAGE_SIZE);
 
-  disk_scheduler_->Schedule({false, buffer, page_id, std::move(*promise_shared)});
+  disk_scheduler_->Schedule({false, data.get(), page_id, std::move(*promise_shared)});
   auto is_disk_operation_successful = future.get();
 
   if (!is_disk_operation_successful) {
     throw Exception("Failed to read page from disk");
   }
 
+  page->ResetMemory();
+  memcpy(pages_[frame_id].data_, data.get(), BUSTUB_PAGE_SIZE);
   page->page_id_ = page_id;
   page->is_dirty_ = false;
   page->pin_count_ = 1;
@@ -159,7 +162,7 @@ auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unus
   auto frame_id = it->second;
   auto page = &pages_[frame_id];
 
-  if (page->pin_count_ == 0) {
+  if (page->pin_count_ <= 0) {
     return false;
   }
 
@@ -169,7 +172,7 @@ auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unus
 
   page->pin_count_--;
 
-  if (page->pin_count_ == 0) {
+  if (page->pin_count_ <= 0) {
     replacer_->SetEvictable(frame_id, true);
   }
 
