@@ -1,9 +1,18 @@
 #include "storage/page/page_guard.h"
 #include "buffer/buffer_pool_manager.h"
 
+// make page_guard_test -j$(nproc) && ./test/page_guard_test
+
 namespace bustub {
 
-BasicPageGuard::BasicPageGuard(BasicPageGuard &&that) noexcept {}
+BasicPageGuard::BasicPageGuard(BasicPageGuard &&that) noexcept {
+  this->bpm_ = that.bpm_;
+  this->page_ = that.page_;
+  this->is_dirty_ = that.is_dirty_;
+  that.bpm_ = nullptr;
+  that.page_ = nullptr;
+  that.is_dirty_ = false;
+}
 
 void BasicPageGuard::Drop() {}
 

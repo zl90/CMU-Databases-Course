@@ -87,6 +87,9 @@ class BasicPageGuard {
 
   auto GetData() -> const char * { return page_->GetData(); }
 
+  /** For testing purposes only */
+  auto GetPage() -> Page * { return page_; }
+
   template <class T>
   auto As() -> const T * {
     return reinterpret_cast<const T *>(GetData());
