@@ -17,8 +17,7 @@ class BasicPageGuard {
   BasicPageGuard(const BasicPageGuard &) = delete;
   auto operator=(const BasicPageGuard &) -> BasicPageGuard & = delete;
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Move constructor for BasicPageGuard
    *
    * When you call BasicPageGuard(std::move(other_guard)), you
@@ -89,6 +88,9 @@ class BasicPageGuard {
 
   /** For testing purposes only */
   auto GetPage() -> Page * { return page_; }
+
+  /** For testing purposes only */
+  auto GetBpm() -> BufferPoolManager * { return bpm_; }
 
   template <class T>
   auto As() -> const T * {
