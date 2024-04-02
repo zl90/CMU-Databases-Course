@@ -16,10 +16,12 @@ BasicPageGuard::BasicPageGuard(BasicPageGuard &&that) noexcept {
 }
 
 void BasicPageGuard::Drop() {
-  this->bpm_->UnpinPage(this->PageId(), this->is_dirty_);
-  this->bpm_ = nullptr;
-  this->page_ = nullptr;
-  this->is_dirty_ = false;
+  if (this->bpm_ != nullptr && this->page_ != nullptr) {
+    this->bpm_->UnpinPage(this->PageId(), this->is_dirty_);
+    this->bpm_ = nullptr;
+    this->page_ = nullptr;
+    this->is_dirty_ = false;
+  }
 }
 
 auto BasicPageGuard::operator=(BasicPageGuard &&that) noexcept -> BasicPageGuard & {
@@ -36,7 +38,7 @@ auto BasicPageGuard::operator=(BasicPageGuard &&that) noexcept -> BasicPageGuard
   return *this;
 }
 
-BasicPageGuard::~BasicPageGuard(){};  // NOLINT
+BasicPageGuard::~BasicPageGuard() { this->Drop(); };  // NOLINT
 
 ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept = default;
 

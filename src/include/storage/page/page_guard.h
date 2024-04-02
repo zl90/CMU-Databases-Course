@@ -38,8 +38,7 @@ class BasicPageGuard {
    */
   void Drop();
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Move assignment for BasicPageGuard
    *
    * Similar to a move constructor, except that the move
@@ -50,8 +49,7 @@ class BasicPageGuard {
    */
   auto operator=(BasicPageGuard &&that) noexcept -> BasicPageGuard &;
 
-  /** TODO(P1): Add implementation
-   *
+  /**
    * @brief Destructor for BasicPageGuard
    *
    * When a page guard goes out of scope, it should behave as if

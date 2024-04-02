@@ -106,6 +106,25 @@ TEST(PageGuardTest, MoveAssignmentTest) {
   disk_manager->ShutDown();
 }
 
+TEST(PageGuardTest, ScopeDestructorTest) {
+  const size_t buffer_pool_size = 5;
+  const size_t k = 2;
+
+  auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
+
+  page_id_t page_id_temp;
+
+  auto *page0 = bpm->NewPage(&page_id_temp);
+
+  { auto guarded_page = ReadPageGuard(bpm.get(), page0); }
+
+  EXPECT_EQ(0, page0->GetPinCount());
+
+  // Shutdown the disk manager and remove the temporary file we created.
+  disk_manager->ShutDown();
+}
+
 TEST(PageGuardTest, SampleTest) {
   const size_t buffer_pool_size = 5;
   const size_t k = 2;
