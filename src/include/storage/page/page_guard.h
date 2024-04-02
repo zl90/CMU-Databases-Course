@@ -28,8 +28,7 @@ class BasicPageGuard {
    */
   BasicPageGuard(BasicPageGuard &&that) noexcept;
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Drop a page guard
    *
    * Dropping a page guard should clear all contents
