@@ -66,7 +66,11 @@ auto BasicPageGuard::UpgradeWrite() -> WritePageGuard {
 
 ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept { this->guard_ = std::move(that.guard_); };
 
-auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & { return *this; }
+auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & {
+  this->guard_ = std::move(that.guard_);
+
+  return *this;
+}
 
 void ReadPageGuard::Drop() {}
 

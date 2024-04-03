@@ -118,8 +118,7 @@ class ReadPageGuard {
   ReadPageGuard(const ReadPageGuard &) = delete;
   auto operator=(const ReadPageGuard &) -> ReadPageGuard & = delete;
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Move constructor for ReadPageGuard
    *
    * Very similar to BasicPageGuard. You want to create
