@@ -57,8 +57,7 @@ class BasicPageGuard {
    */
   ~BasicPageGuard();
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Upgrade a BasicPageGuard to a ReadPageGuard
    *
    * The protected page is not evicted from the buffer pool during the upgrade,

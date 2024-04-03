@@ -40,6 +40,30 @@ auto BasicPageGuard::operator=(BasicPageGuard &&that) noexcept -> BasicPageGuard
 
 BasicPageGuard::~BasicPageGuard() { this->Drop(); };  // NOLINT
 
+auto BasicPageGuard::UpgradeRead() -> ReadPageGuard {
+  ReadPageGuard result = {this->bpm_, this->page_};
+
+  if (this->bpm_ != nullptr && this->page_ != nullptr) {
+    this->bpm_ = nullptr;
+    this->page_ = nullptr;
+    this->is_dirty_ = false;
+  }
+
+  return result;
+}
+
+auto BasicPageGuard::UpgradeWrite() -> WritePageGuard {
+  WritePageGuard result = {this->bpm_, this->page_};
+
+  if (this->bpm_ != nullptr && this->page_ != nullptr) {
+    this->bpm_ = nullptr;
+    this->page_ = nullptr;
+    this->is_dirty_ = false;
+  }
+
+  return result;
+}
+
 ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept = default;
 
 auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & { return *this; }
