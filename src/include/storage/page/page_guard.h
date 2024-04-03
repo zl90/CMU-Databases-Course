@@ -67,8 +67,7 @@ class BasicPageGuard {
    */
   auto UpgradeRead() -> ReadPageGuard;
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Upgrade a BasicPageGuard to a WritePageGuard
    *
    * The protected page is not evicted from the buffer pool during the upgrade,
@@ -161,6 +160,12 @@ class ReadPageGuard {
   auto PageId() -> page_id_t { return guard_.PageId(); }
 
   auto GetData() -> const char * { return guard_.GetData(); }
+
+  /** For testing purposes only */
+  auto GetPage() -> Page * { return guard_.page_; }
+
+  /** For testing purposes only */
+  auto GetBpm() -> BufferPoolManager * { return guard_.bpm_; }
 
   template <class T>
   auto As() -> const T * {
