@@ -72,9 +72,15 @@ auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & 
   return *this;
 }
 
-void ReadPageGuard::Drop() {}
+void ReadPageGuard::Drop() {
+  this->guard_.page_->RUnlatch();
+  this->guard_.Drop();
+}
 
-ReadPageGuard::~ReadPageGuard() {}  // NOLINT
+ReadPageGuard::~ReadPageGuard() {
+  this->guard_.page_->RUnlatch();
+  this->guard_.Drop();
+}  // NOLINT
 
 WritePageGuard::WritePageGuard(WritePageGuard &&that) noexcept = default;
 

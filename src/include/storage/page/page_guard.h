@@ -114,7 +114,7 @@ class BasicPageGuard {
 class ReadPageGuard {
  public:
   ReadPageGuard() = default;
-  ReadPageGuard(BufferPoolManager *bpm, Page *page) : guard_(bpm, page) {}
+  ReadPageGuard(BufferPoolManager *bpm, Page *page) : guard_(bpm, page) { guard_.page_->RLatch(); }
   ReadPageGuard(const ReadPageGuard &) = delete;
   auto operator=(const ReadPageGuard &) -> ReadPageGuard & = delete;
 
@@ -127,8 +127,7 @@ class ReadPageGuard {
    */
   ReadPageGuard(ReadPageGuard &&that) noexcept;
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Move assignment for ReadPageGuard
    *
    * Very similar to BasicPageGuard. Given another ReadPageGuard,
@@ -136,9 +135,7 @@ class ReadPageGuard {
    */
   auto operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard &;
 
-  /** TODO(P2): Add implementation
-   *
-   * @brief Drop a ReadPageGuard
+  /** TODO(P2):
    *
    * ReadPageGuard's Drop should behave similarly to BasicPageGuard,
    * except that ReadPageGuard has an additional resource - the latch!
@@ -147,8 +144,7 @@ class ReadPageGuard {
    */
   void Drop();
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Destructor for ReadPageGuard
    *
    * Just like with BasicPageGuard, this should behave
