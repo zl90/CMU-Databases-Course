@@ -263,7 +263,89 @@ TEST(ReadPageGuardTest, DropTest) {
   EXPECT_EQ(nullptr, guarded_page.GetBpm());
   EXPECT_EQ(0, page0->GetPinCount());
 
-  // Note to self: possibly add a function to return the Rlatch state of the page, just for testing purposes?
+  // Shutdown the disk manager and remove the temporary file we created.
+  disk_manager->ShutDown();
+}
+
+TEST(WritePageGuardTest, MoveConstructorTest) {
+  const size_t buffer_pool_size = 5;
+  const size_t k = 2;
+
+  auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
+
+  page_id_t page_id_temp;
+  auto *page0 = bpm->NewPage(&page_id_temp);
+
+  auto write_guarded_page = WritePageGuard(bpm.get(), page0);
+  auto write_guarded_page2(std::move(write_guarded_page));
+
+  EXPECT_EQ(page0->GetData(), write_guarded_page2.GetData());
+  EXPECT_EQ(page0->GetPageId(), write_guarded_page2.PageId());
+  EXPECT_EQ(1, page0->GetPinCount());
+  EXPECT_EQ(nullptr, write_guarded_page.GetBpm());
+  EXPECT_EQ(nullptr, write_guarded_page.GetPage());
+
+  // Shutdown the disk manager and remove the temporary file we created.
+  disk_manager->ShutDown();
+}
+
+TEST(WritePageGuardTest, MoveAssignmentTest) {
+  const size_t buffer_pool_size = 5;
+  const size_t k = 2;
+
+  auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
+
+  page_id_t page_id_temp;
+  auto *page0 = bpm->NewPage(&page_id_temp);
+  page_id_t page_id_temp2;
+  auto *page1 = bpm->NewPage(&page_id_temp2);
+
+  auto write_guarded_page = WritePageGuard(bpm.get(), page0);
+  auto write_guarded_page2 = WritePageGuard(bpm.get(), page1);
+
+  EXPECT_EQ(page0->GetData(), write_guarded_page.GetData());
+  EXPECT_EQ(page0->GetPageId(), write_guarded_page.PageId());
+  EXPECT_EQ(1, page0->GetPinCount());
+  EXPECT_EQ(page1->GetData(), write_guarded_page2.GetData());
+  EXPECT_EQ(page1->GetPageId(), write_guarded_page2.PageId());
+  EXPECT_EQ(1, page1->GetPinCount());
+
+  write_guarded_page2 = std::move(write_guarded_page);
+
+  EXPECT_EQ(page0->GetData(), write_guarded_page2.GetData());
+  EXPECT_EQ(page0->GetPageId(), write_guarded_page2.PageId());
+  EXPECT_EQ(1, page0->GetPinCount());
+  EXPECT_EQ(nullptr, write_guarded_page.GetPage());
+  EXPECT_EQ(nullptr, write_guarded_page.GetBpm());
+  EXPECT_EQ(0, page1->GetPinCount());
+
+  // Shutdown the disk manager and remove the temporary file we created.
+  disk_manager->ShutDown();
+}
+
+TEST(WritePageGuardTest, DropTest) {
+  const size_t buffer_pool_size = 5;
+  const size_t k = 2;
+
+  auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
+
+  page_id_t page_id_temp;
+  auto *page0 = bpm->NewPage(&page_id_temp);
+
+  auto guarded_page = WritePageGuard(bpm.get(), page0);
+
+  EXPECT_EQ(page0->GetData(), guarded_page.GetData());
+  EXPECT_EQ(page0->GetPageId(), guarded_page.PageId());
+  EXPECT_EQ(1, page0->GetPinCount());
+
+  guarded_page.Drop();
+
+  EXPECT_EQ(nullptr, guarded_page.GetPage());
+  EXPECT_EQ(nullptr, guarded_page.GetBpm());
+  EXPECT_EQ(0, page0->GetPinCount());
 
   // Shutdown the disk manager and remove the temporary file we created.
   disk_manager->ShutDown();

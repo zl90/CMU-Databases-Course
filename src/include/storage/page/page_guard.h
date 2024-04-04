@@ -135,7 +135,7 @@ class ReadPageGuard {
    */
   auto operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard &;
 
-  /** TODO(P2):
+  /**
    *
    * ReadPageGuard's Drop should behave similarly to BasicPageGuard,
    * except that ReadPageGuard has an additional resource - the latch!
@@ -175,12 +175,11 @@ class ReadPageGuard {
 class WritePageGuard {
  public:
   WritePageGuard() = default;
-  WritePageGuard(BufferPoolManager *bpm, Page *page) : guard_(bpm, page) {}
+  WritePageGuard(BufferPoolManager *bpm, Page *page) : guard_(bpm, page) { guard_.page_->WLatch(); }
   WritePageGuard(const WritePageGuard &) = delete;
   auto operator=(const WritePageGuard &) -> WritePageGuard & = delete;
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Move constructor for WritePageGuard
    *
    * Very similar to BasicPageGuard. You want to create
@@ -189,8 +188,7 @@ class WritePageGuard {
    */
   WritePageGuard(WritePageGuard &&that) noexcept;
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Move assignment for WritePageGuard
    *
    * Very similar to BasicPageGuard. Given another WritePageGuard,
@@ -198,8 +196,7 @@ class WritePageGuard {
    */
   auto operator=(WritePageGuard &&that) noexcept -> WritePageGuard &;
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Drop a WritePageGuard
    *
    * WritePageGuard's Drop should behave similarly to BasicPageGuard,
@@ -209,8 +206,7 @@ class WritePageGuard {
    */
   void Drop();
 
-  /** TODO(P2): Add implementation
-   *
+  /**
    * @brief Destructor for WritePageGuard
    *
    * Just like with BasicPageGuard, this should behave
@@ -221,6 +217,12 @@ class WritePageGuard {
   auto PageId() -> page_id_t { return guard_.PageId(); }
 
   auto GetData() -> const char * { return guard_.GetData(); }
+
+  /** For testing purposes only */
+  auto GetPage() -> Page * { return guard_.page_; }
+
+  /** For testing purposes only */
+  auto GetBpm() -> BufferPoolManager * { return guard_.bpm_; }
 
   template <class T>
   auto As() -> const T * {
