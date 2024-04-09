@@ -39,6 +39,7 @@ class LRUKNode {
 };
 
 /**
+ * TODO(P1): Add implementation
  * LRUKReplacer implements the LRU-k replacement policy.
  *
  * The LRU-k algorithm evicts a frame whose backward k-distance is maximum
@@ -83,6 +84,7 @@ class LRUKReplacer {
   auto Evict(frame_id_t *frame_id) -> bool;
 
   /**
+   * TODO(P1): Add implementation
    * @brief Record the event that the given frame id is accessed at current timestamp.
    * Create a new entry for access history if frame id has not been seen before.
    *
@@ -96,6 +98,7 @@ class LRUKReplacer {
   void RecordAccess(frame_id_t frame_id, AccessType access_type = AccessType::Unknown);
 
   /**
+   * TODO(P1): Add implementation
    * @brief Toggle whether a frame is evictable or non-evictable. This function also
    * controls replacer's size. Note that size is equal to number of evictable entries.
    *
@@ -113,6 +116,7 @@ class LRUKReplacer {
   void SetEvictable(frame_id_t frame_id, bool set_evictable);
 
   /**
+   * TODO(P1): Add implementation
    * @brief Remove an evictable frame from replacer, along with its access history.
    * This function should also decrement replacer's size if removal is successful.
    *
@@ -130,6 +134,7 @@ class LRUKReplacer {
   void Remove(frame_id_t frame_id);
 
   /**
+   * TODO(P1): Add implementation
    * @brief Return replacer's size, which tracks the number of evictable frames.
    *
    * @return size_t

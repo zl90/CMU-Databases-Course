@@ -32,8 +32,6 @@ DiskScheduler::~DiskScheduler() {
   }
 }
 
-void DiskScheduler::Schedule(DiskRequest r) { request_queue_.Put(std::move(r)); }
-
 void DiskScheduler::StartWorkerThread() {
   while (true) {
     try {
@@ -52,9 +50,11 @@ void DiskScheduler::StartWorkerThread() {
         disk_request->callback_.set_value(true);
       }
     } catch (...) {
-      throw Exception("Error: disk I/O operation failed.");
+      throw Exception("Disk operation failed.");
     }
   }
 }
+
+void DiskScheduler::Schedule(DiskRequest r) { request_queue_.Put(std::move(r)); }
 
 }  // namespace bustub

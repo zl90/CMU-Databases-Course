@@ -12,7 +12,6 @@
 
 #include <cstdio>
 #include <random>
-#include <string>
 
 #include "buffer/buffer_pool_manager.h"
 #include "storage/disk/disk_manager_memory.h"
@@ -125,35 +124,6 @@ TEST(PageGuardTest, ScopeDestructorTest) {
   disk_manager->ShutDown();
 }
 
-TEST(PageGuardTest, UpgradeReadTest) {
-  const size_t buffer_pool_size = 5;
-  const size_t k = 2;
-
-  auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
-  auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
-
-  page_id_t page_id_temp;
-
-  auto *page0 = bpm->NewPage(&page_id_temp);
-
-  auto guarded_page = BasicPageGuard(bpm.get(), page0);
-
-  EXPECT_EQ(page0->GetData(), guarded_page.GetData());
-  EXPECT_EQ(page0->GetPageId(), guarded_page.PageId());
-  EXPECT_EQ(1, page0->GetPinCount());
-
-  auto read_guarded_page = guarded_page.UpgradeRead();
-
-  EXPECT_EQ(page0->GetData(), read_guarded_page.GetData());
-  EXPECT_EQ(page0->GetPageId(), read_guarded_page.PageId());
-  EXPECT_EQ(1, page0->GetPinCount());
-  EXPECT_EQ(nullptr, guarded_page.GetBpm());
-  EXPECT_EQ(nullptr, guarded_page.GetPage());
-
-  // Shutdown the disk manager and remove the temporary file we created.
-  disk_manager->ShutDown();
-}
-
 TEST(PageGuardTest, UpgradeWriteTest) {
   const size_t buffer_pool_size = 5;
   const size_t k = 2;
@@ -175,6 +145,35 @@ TEST(PageGuardTest, UpgradeWriteTest) {
 
   EXPECT_EQ(page0->GetData(), write_guarded_page.GetData());
   EXPECT_EQ(page0->GetPageId(), write_guarded_page.PageId());
+  EXPECT_EQ(1, page0->GetPinCount());
+  EXPECT_EQ(nullptr, guarded_page.GetBpm());
+  EXPECT_EQ(nullptr, guarded_page.GetPage());
+
+  // Shutdown the disk manager and remove the temporary file we created.
+  disk_manager->ShutDown();
+}
+
+TEST(PageGuardTest, UpgradeReadTest) {
+  const size_t buffer_pool_size = 5;
+  const size_t k = 2;
+
+  auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
+
+  page_id_t page_id_temp;
+
+  auto *page0 = bpm->NewPage(&page_id_temp);
+
+  auto guarded_page = BasicPageGuard(bpm.get(), page0);
+
+  EXPECT_EQ(page0->GetData(), guarded_page.GetData());
+  EXPECT_EQ(page0->GetPageId(), guarded_page.PageId());
+  EXPECT_EQ(1, page0->GetPinCount());
+
+  auto read_guarded_page = guarded_page.UpgradeRead();
+
+  EXPECT_EQ(page0->GetData(), read_guarded_page.GetData());
+  EXPECT_EQ(page0->GetPageId(), read_guarded_page.PageId());
   EXPECT_EQ(1, page0->GetPinCount());
   EXPECT_EQ(nullptr, guarded_page.GetBpm());
   EXPECT_EQ(nullptr, guarded_page.GetPage());
@@ -267,29 +266,6 @@ TEST(ReadPageGuardTest, DropTest) {
   disk_manager->ShutDown();
 }
 
-TEST(WritePageGuardTest, MoveConstructorTest) {
-  const size_t buffer_pool_size = 5;
-  const size_t k = 2;
-
-  auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
-  auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
-
-  page_id_t page_id_temp;
-  auto *page0 = bpm->NewPage(&page_id_temp);
-
-  auto write_guarded_page = WritePageGuard(bpm.get(), page0);
-  auto write_guarded_page2(std::move(write_guarded_page));
-
-  EXPECT_EQ(page0->GetData(), write_guarded_page2.GetData());
-  EXPECT_EQ(page0->GetPageId(), write_guarded_page2.PageId());
-  EXPECT_EQ(1, page0->GetPinCount());
-  EXPECT_EQ(nullptr, write_guarded_page.GetBpm());
-  EXPECT_EQ(nullptr, write_guarded_page.GetPage());
-
-  // Shutdown the disk manager and remove the temporary file we created.
-  disk_manager->ShutDown();
-}
-
 TEST(WritePageGuardTest, MoveAssignmentTest) {
   const size_t buffer_pool_size = 5;
   const size_t k = 2;
@@ -320,6 +296,29 @@ TEST(WritePageGuardTest, MoveAssignmentTest) {
   EXPECT_EQ(nullptr, write_guarded_page.GetPage());
   EXPECT_EQ(nullptr, write_guarded_page.GetBpm());
   EXPECT_EQ(0, page1->GetPinCount());
+
+  // Shutdown the disk manager and remove the temporary file we created.
+  disk_manager->ShutDown();
+}
+
+TEST(WritePageGuardTest, MoveConstructorTest) {
+  const size_t buffer_pool_size = 5;
+  const size_t k = 2;
+
+  auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
+
+  page_id_t page_id_temp;
+  auto *page0 = bpm->NewPage(&page_id_temp);
+
+  auto write_guarded_page = WritePageGuard(bpm.get(), page0);
+  auto write_guarded_page2(std::move(write_guarded_page));
+
+  EXPECT_EQ(page0->GetData(), write_guarded_page2.GetData());
+  EXPECT_EQ(page0->GetPageId(), write_guarded_page2.PageId());
+  EXPECT_EQ(1, page0->GetPinCount());
+  EXPECT_EQ(nullptr, write_guarded_page.GetBpm());
+  EXPECT_EQ(nullptr, write_guarded_page.GetPage());
 
   // Shutdown the disk manager and remove the temporary file we created.
   disk_manager->ShutDown();

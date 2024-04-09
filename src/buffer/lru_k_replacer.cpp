@@ -33,6 +33,25 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
   }
 }
 
+void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
+  std::lock_guard<std::mutex> lock(latch_);
+
+  current_timestamp_++;
+
+  auto it = node_store_.find(frame_id);
+  if (it == node_store_.end()) {
+    throw Exception(fmt::format("Invalid frame_id. frame_id: {}", frame_id));
+  }
+
+  if (node_store_[frame_id].is_evictable_ && !set_evictable) {
+    curr_size_--;
+  } else if (!node_store_[frame_id].is_evictable_ && set_evictable) {
+    curr_size_++;
+  }
+
+  node_store_[frame_id].is_evictable_ = set_evictable;
+}
+
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   std::lock_guard<std::mutex> lock(latch_);
 
@@ -60,20 +79,20 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   if (!frames_with_infinite_k_distance.empty()) {
     auto first_node = frames_with_infinite_k_distance.begin()->second;
     auto earliest_timestamp = first_node.history_.front();
-    auto eviction_candidate_id = first_node.fid_;
+    auto evicted_frame_id = first_node.fid_;
 
     for (const auto &[curr_frame_id, curr_node] : frames_with_infinite_k_distance) {
       auto latest_access_timestamp = curr_node.history_.front();
 
       if (latest_access_timestamp < earliest_timestamp) {
         earliest_timestamp = latest_access_timestamp;
-        eviction_candidate_id = curr_frame_id;
+        evicted_frame_id = curr_frame_id;
       }
     }
 
-    *frame_id = eviction_candidate_id;
-    node_store_[eviction_candidate_id].history_.clear();
-    node_store_[eviction_candidate_id].is_evictable_ = false;
+    *frame_id = evicted_frame_id;
+    node_store_[evicted_frame_id].history_.clear();
+    node_store_[evicted_frame_id].is_evictable_ = false;
     curr_size_--;
     return true;
   }
@@ -87,7 +106,7 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
     auto value_at_kth_previous_access = *it;
 
     auto largest_backward_k = current_timestamp_ - value_at_kth_previous_access;
-    auto eviction_candidate_id = first_node.fid_;
+    auto evicted_frame_id = first_node.fid_;
 
     for (const auto &[curr_frame_id, curr_node] : evictable_frames) {
       auto it = curr_node.history_.begin();
@@ -99,13 +118,13 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 
       if (current_backward_k > largest_backward_k) {
         largest_backward_k = current_backward_k;
-        eviction_candidate_id = curr_frame_id;
+        evicted_frame_id = curr_frame_id;
       }
     }
 
-    *frame_id = eviction_candidate_id;
-    node_store_[eviction_candidate_id].history_.clear();
-    node_store_[eviction_candidate_id].is_evictable_ = false;
+    *frame_id = evicted_frame_id;
+    node_store_[evicted_frame_id].history_.clear();
+    node_store_[evicted_frame_id].is_evictable_ = false;
     curr_size_--;
     return true;
   }
@@ -126,23 +145,9 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
   node_store_[frame_id].history_.emplace_back(current_timestamp_);
 }
 
-void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
+auto LRUKReplacer::Size() -> size_t {
   std::lock_guard<std::mutex> lock(latch_);
-
-  current_timestamp_++;
-
-  auto it = node_store_.find(frame_id);
-  if (it == node_store_.end()) {
-    throw Exception(fmt::format("Invalid frame_id. frame_id: {}", frame_id));
-  }
-
-  if (node_store_[frame_id].is_evictable_ && !set_evictable) {
-    curr_size_--;
-  } else if (!node_store_[frame_id].is_evictable_ && set_evictable) {
-    curr_size_++;
-  }
-
-  node_store_[frame_id].is_evictable_ = set_evictable;
+  return curr_size_;
 }
 
 void LRUKReplacer::Remove(frame_id_t frame_id) {
@@ -161,11 +166,6 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
   node_store_[frame_id].history_.clear();
   node_store_[frame_id].is_evictable_ = false;
   curr_size_--;
-}
-
-auto LRUKReplacer::Size() -> size_t {
-  std::lock_guard<std::mutex> lock(latch_);
-  return curr_size_;
 }
 
 }  // namespace bustub
