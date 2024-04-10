@@ -11,23 +11,43 @@
 //===----------------------------------------------------------------------===//
 
 #include "storage/page/extendible_htable_header_page.h"
+#include <algorithm>
+#include <cstdint>
 
+#include "common/config.h"
 #include "common/exception.h"
 
 namespace bustub {
 
 void ExtendibleHTableHeaderPage::Init(uint32_t max_depth) {
-  throw NotImplementedException("ExtendibleHTableHeaderPage is not implemented");
+  max_depth_ = max_depth;
+
+  for (auto &item : directory_page_ids_) {
+    item = INVALID_PAGE_ID;
+  }
 }
 
 auto ExtendibleHTableHeaderPage::HashToDirectoryIndex(uint32_t hash) const -> uint32_t { return 0; }
 
-auto ExtendibleHTableHeaderPage::GetDirectoryPageId(uint32_t directory_idx) const -> uint32_t { return 0; }
+auto ExtendibleHTableHeaderPage::GetDirectoryPageId(uint32_t directory_idx) const -> uint32_t {
+  if (directory_idx >= MaxSize()) {
+    throw Exception("Index out of bounds");
+  }
 
-void ExtendibleHTableHeaderPage::SetDirectoryPageId(uint32_t directory_idx, page_id_t directory_page_id) {
-  throw NotImplementedException("ExtendibleHTableHeaderPage is not implemented");
+  return directory_page_ids_[directory_idx];
 }
 
-auto ExtendibleHTableHeaderPage::MaxSize() const -> uint32_t { return 0; }
+void ExtendibleHTableHeaderPage::SetDirectoryPageId(uint32_t directory_idx, page_id_t directory_page_id) {
+  if (directory_idx >= MaxSize()) {
+    throw Exception("Index out of bounds");
+  }
+
+  directory_page_ids_[directory_idx] = directory_page_id;
+}
+
+auto ExtendibleHTableHeaderPage::MaxSize() const -> uint32_t {
+  uint64_t ideal_max_size = 1 << max_depth_;
+  return std::min(ideal_max_size, HTABLE_HEADER_ARRAY_SIZE);
+}
 
 }  // namespace bustub

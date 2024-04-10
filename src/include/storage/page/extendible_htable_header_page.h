@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <cstdlib>
 #include "common/config.h"
 #include "common/macros.h"
@@ -75,6 +76,9 @@ class ExtendibleHTableHeaderPage {
    * Prints the header's occupancy information
    */
   void PrintHeader() const;
+
+  /** For testing purposes only */
+  auto MaxDepth() -> uint32_t { return max_depth_; }
 
  private:
   page_id_t directory_page_ids_[HTABLE_HEADER_ARRAY_SIZE];

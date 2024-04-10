@@ -15,6 +15,8 @@
 #include <vector>
 
 #include "buffer/buffer_pool_manager.h"
+#include "common/config.h"
+#include "common/exception.h"
 #include "common/logger.h"
 #include "gtest/gtest.h"
 #include "storage/disk/disk_manager_memory.h"
@@ -83,6 +85,26 @@ TEST(ExtendibleHTableTest, DISABLED_BucketPageSampleTest) {
     }
 
     ASSERT_TRUE(bucket_page->IsEmpty());
+  }  // page guard dropped
+}
+
+TEST(ExtendibleHTableTest, HeaderPageTest) {
+  auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_unique<BufferPoolManager>(5, disk_mgr.get());
+
+  page_id_t header_page_id = INVALID_PAGE_ID;
+  {
+    /************************ HEADER PAGE TEST ************************/
+    BasicPageGuard header_guard = bpm->NewPageGuarded(&header_page_id);
+    auto header_page = header_guard.AsMut<ExtendibleHTableHeaderPage>();
+    header_page->Init(2);
+
+    EXPECT_EQ(INVALID_PAGE_ID, header_page->GetDirectoryPageId(0));
+    EXPECT_EQ(2, header_page->MaxDepth());
+    EXPECT_THROW(header_page->SetDirectoryPageId(-2, 3), Exception);
+
+    header_guard.Drop();
+
   }  // page guard dropped
 }
 
