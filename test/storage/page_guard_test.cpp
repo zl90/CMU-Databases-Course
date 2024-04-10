@@ -61,6 +61,7 @@ TEST(PageGuardTest, DropTest) {
   EXPECT_EQ(1, page0->GetPinCount());
 
   guarded_page.Drop();
+  guarded_page.Drop();  // Should be able to handle double dropping
 
   EXPECT_EQ(nullptr, guarded_page.GetPage());
   EXPECT_EQ(nullptr, guarded_page.GetBpm());
@@ -81,9 +82,12 @@ TEST(PageGuardTest, MoveAssignmentTest) {
   auto *page0 = bpm->NewPage(&page_id_temp);
   page_id_t page_id_temp2;
   auto *page1 = bpm->NewPage(&page_id_temp2);
+  page_id_t page_id_temp3;
+  auto *page2 = bpm->NewPage(&page_id_temp3);
 
   auto guarded_page = BasicPageGuard(bpm.get(), page0);
   auto guarded_page2 = BasicPageGuard(bpm.get(), page1);
+  auto guarded_page3 = BasicPageGuard(bpm.get(), page2);
 
   EXPECT_EQ(page0->GetData(), guarded_page.GetData());
   EXPECT_EQ(page0->GetPageId(), guarded_page.PageId());
@@ -99,6 +103,16 @@ TEST(PageGuardTest, MoveAssignmentTest) {
   EXPECT_EQ(1, page0->GetPinCount());
   EXPECT_EQ(nullptr, guarded_page.GetPage());
   EXPECT_EQ(nullptr, guarded_page.GetBpm());
+  EXPECT_EQ(0, page1->GetPinCount());
+
+  guarded_page = std::move(guarded_page2);
+  guarded_page = std::move(guarded_page3);
+
+  EXPECT_EQ(page0->GetData(), guarded_page.GetData());
+  EXPECT_EQ(page0->GetPageId(), guarded_page.PageId());
+  EXPECT_EQ(1, page0->GetPinCount());
+  EXPECT_EQ(nullptr, guarded_page2.GetPage());
+  EXPECT_EQ(nullptr, guarded_page2.GetBpm());
   EXPECT_EQ(0, page1->GetPinCount());
 
   // Shutdown the disk manager and remove the temporary file we created.

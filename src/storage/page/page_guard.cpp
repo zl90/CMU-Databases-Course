@@ -6,17 +6,10 @@
 namespace bustub {
 
 BasicPageGuard::BasicPageGuard(BasicPageGuard &&that) noexcept {
-  bpm_ = std::exchange(that.bpm_, nullptr);
-  page_ = std::exchange(that.page_, nullptr);
-  is_dirty_ = std::exchange(that.is_dirty_, false);
-}
-
-void BasicPageGuard::Drop() {
-  if (bpm_ != nullptr && page_ != nullptr) {
-    bpm_->UnpinPage(PageId(), is_dirty_);
-    bpm_ = nullptr;
-    page_ = nullptr;
-    is_dirty_ = false;
+  if (this != &that) {
+    bpm_ = std::exchange(that.bpm_, nullptr);
+    page_ = std::exchange(that.page_, nullptr);
+    is_dirty_ = that.is_dirty_;
   }
 }
 
@@ -26,10 +19,19 @@ auto BasicPageGuard::operator=(BasicPageGuard &&that) noexcept -> BasicPageGuard
 
     bpm_ = std::exchange(that.bpm_, nullptr);
     page_ = std::exchange(that.page_, nullptr);
-    is_dirty_ = std::exchange(that.is_dirty_, false);
+    is_dirty_ = that.is_dirty_;
   }
 
   return *this;
+}
+
+void BasicPageGuard::Drop() {
+  if (bpm_ != nullptr && page_ != nullptr) {
+    bpm_->UnpinPage(PageId(), is_dirty_);
+    bpm_ = nullptr;
+    page_ = nullptr;
+    is_dirty_ = false;
+  }
 }
 
 auto BasicPageGuard::UpgradeRead() -> ReadPageGuard {
@@ -58,10 +60,16 @@ auto BasicPageGuard::UpgradeWrite() -> WritePageGuard {
   return result;
 }
 
-ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept { guard_ = std::move(that.guard_); };
+ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept {
+  if (this != &that) {
+    Drop();
+    guard_ = std::move(that.guard_);
+  };
+}
 
 auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & {
   if (this != &that) {
+    Drop();
     guard_ = std::move(that.guard_);
   }
 
@@ -79,13 +87,19 @@ ReadPageGuard::~ReadPageGuard() { Drop(); }  // NOLINT
 
 auto WritePageGuard::operator=(WritePageGuard &&that) noexcept -> WritePageGuard & {
   if (this != &that) {
+    Drop();
     guard_ = std::move(that.guard_);
   }
 
   return *this;
 }
 
-WritePageGuard::WritePageGuard(WritePageGuard &&that) noexcept { guard_ = std::move(that.guard_); };
+WritePageGuard::WritePageGuard(WritePageGuard &&that) noexcept {
+  if (this != &that) {
+    Drop();
+    guard_ = std::move(that.guard_);
+  }
+};
 
 void WritePageGuard::Drop() {
   if (guard_.page_ != nullptr && guard_.bpm_ != nullptr) {
