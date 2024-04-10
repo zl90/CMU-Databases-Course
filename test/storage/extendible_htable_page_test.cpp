@@ -103,6 +103,19 @@ TEST(ExtendibleHTableTest, HeaderPageTest) {
     EXPECT_EQ(2, header_page->MaxDepth());
     EXPECT_THROW(header_page->SetDirectoryPageId(-2, 3), Exception);
 
+    /* Test hashes for header page
+   00000000000000001000000000000000 - 32768
+   01000000000000001000000000000000 - 1073774592
+   10000000000000001000000000000000 - 2147516416
+   11000000000000001000000000000000 - 3221258240
+   */
+
+    // ensure we are hashing into proper bucket based on upper 2 bits
+    uint32_t hashes[4]{32768, 1073774592, 2147516416, 3221258240};
+    for (uint32_t i = 0; i < 4; i++) {
+      ASSERT_EQ(header_page->HashToDirectoryIndex(hashes[i]), i);
+    }
+
     header_guard.Drop();
 
   }  // page guard dropped
