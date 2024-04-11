@@ -17,6 +17,7 @@
 
 #include "common/config.h"
 #include "common/logger.h"
+#include "fmt/core.h"
 
 namespace bustub {
 
@@ -54,32 +55,76 @@ void ExtendibleHTableDirectoryPage::SetBucketPageId(uint32_t bucket_idx, page_id
 
 auto ExtendibleHTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) const -> uint32_t { return 0; }
 
-auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t { return 0; }
+auto ExtendibleHTableDirectoryPage::GetGlobalDepthMask() const -> uint32_t { return 0; }
+
+auto ExtendibleHTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx) const -> uint32_t { return 0; }
+
+auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t { return global_depth_; }
 
 void ExtendibleHTableDirectoryPage::IncrGlobalDepth() {
-  throw NotImplementedException("ExtendibleHTableDirectoryPage is not implemented");
+  if (global_depth_ < max_depth_) {
+    global_depth_ += 1;
+  }
 }
 
 void ExtendibleHTableDirectoryPage::DecrGlobalDepth() {
-  throw NotImplementedException("ExtendibleHTableDirectoryPage is not implemented");
+  if (global_depth_ > 1) {
+    global_depth_ -= 1;
+  }
+
+  // @TODO: Make sure there are no local_depths_ that are now larger than global_depth_
 }
 
-auto ExtendibleHTableDirectoryPage::CanShrink() -> bool { return false; }
+auto ExtendibleHTableDirectoryPage::CanShrink() -> bool { return global_depth_ > 1; }
 
-auto ExtendibleHTableDirectoryPage::Size() const -> uint32_t { return 0; }
+auto ExtendibleHTableDirectoryPage::Size() const -> uint32_t {
+  uint64_t ideal_size = 1 << global_depth_;
+  return std::min(ideal_size, HTABLE_DIRECTORY_ARRAY_SIZE);
+}
 
-auto ExtendibleHTableDirectoryPage::GetLocalDepth(uint32_t bucket_idx) const -> uint32_t { return 0; }
+auto ExtendibleHTableDirectoryPage::MaxSize() const -> uint32_t {
+  uint64_t ideal_max_size = 1 << max_depth_;
+  return std::min(ideal_max_size, HTABLE_DIRECTORY_ARRAY_SIZE);
+}
+
+auto ExtendibleHTableDirectoryPage::GetLocalDepth(uint32_t bucket_idx) const -> uint32_t {
+  if (bucket_idx >= Size()) {
+    throw Exception("Index out of bounds");
+  }
+
+  return local_depths_[bucket_idx];
+}
 
 void ExtendibleHTableDirectoryPage::SetLocalDepth(uint32_t bucket_idx, uint8_t local_depth) {
-  throw NotImplementedException("ExtendibleHTableDirectoryPage is not implemented");
+  if (bucket_idx >= Size()) {
+    throw Exception("Index out of bounds");
+  }
+
+  if (local_depth <= global_depth_ && local_depth >= 1) {
+    local_depths_[bucket_idx] = local_depth;
+  } else {
+    throw Exception(fmt::format("Invalid local depth value: {}", local_depth));
+  }
 }
 
 void ExtendibleHTableDirectoryPage::IncrLocalDepth(uint32_t bucket_idx) {
-  throw NotImplementedException("ExtendibleHTableDirectoryPage is not implemented");
+  if (bucket_idx >= Size()) {
+    throw Exception("Index out of bounds");
+  }
+
+  if (local_depths_[bucket_idx] < global_depth_ && local_depths_[bucket_idx] < max_depth_) {
+    local_depths_[bucket_idx] += 1;
+  }
 }
 
 void ExtendibleHTableDirectoryPage::DecrLocalDepth(uint32_t bucket_idx) {
-  throw NotImplementedException("ExtendibleHTableDirectoryPage is not implemented");
+  if (bucket_idx >= Size()) {
+    throw Exception("Index out of bounds");
+  }
+
+  if (local_depths_[bucket_idx] > 1) {
+    local_depths_[bucket_idx] -= 1;
+  }
 }
 
 }  // namespace bustub
