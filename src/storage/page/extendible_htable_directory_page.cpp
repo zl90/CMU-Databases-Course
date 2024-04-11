@@ -21,10 +21,20 @@
 namespace bustub {
 
 void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth) {
-  throw NotImplementedException("ExtendibleHTableDirectoryPage is not implemented");
+  max_depth_ = max_depth;
+
+  for (auto &item : bucket_page_ids_) {
+    item = INVALID_PAGE_ID;
+  }
+
+  for (auto &item : local_depths_) {
+    item = 1;
+  }
 }
 
-auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> uint32_t { return 0; }
+auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> uint32_t {
+  return hash >> ((sizeof(hash) * 8) - max_depth_);
+}
 
 auto ExtendibleHTableDirectoryPage::GetBucketPageId(uint32_t bucket_idx) const -> page_id_t { return INVALID_PAGE_ID; }
 
