@@ -75,7 +75,22 @@ void ExtendibleHTableDirectoryPage::DecrGlobalDepth() {
   // @TODO: Make sure there are no local_depths_ that are now larger than global_depth_
 }
 
-auto ExtendibleHTableDirectoryPage::CanShrink() -> bool { return global_depth_ > 1; }
+auto ExtendibleHTableDirectoryPage::CanShrink() -> bool {
+  if (global_depth_ < 1) {
+    return false;
+  }
+
+  bool can_shrink = true;
+
+  for (const auto &local_depth : local_depths_) {
+    if (local_depth == global_depth_) {
+      can_shrink = false;
+      break;
+    }
+  }
+
+  return can_shrink;
+}
 
 auto ExtendibleHTableDirectoryPage::Size() const -> uint32_t {
   uint64_t ideal_size = 1 << global_depth_;
