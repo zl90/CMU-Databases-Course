@@ -36,10 +36,20 @@ auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> ui
   return hash >> ((sizeof(hash) * 8) - max_depth_);
 }
 
-auto ExtendibleHTableDirectoryPage::GetBucketPageId(uint32_t bucket_idx) const -> page_id_t { return INVALID_PAGE_ID; }
+auto ExtendibleHTableDirectoryPage::GetBucketPageId(uint32_t bucket_idx) const -> page_id_t {
+  if (bucket_idx >= Size()) {
+    throw Exception("Index out of bounds");
+  }
+
+  return bucket_page_ids_[bucket_idx];
+}
 
 void ExtendibleHTableDirectoryPage::SetBucketPageId(uint32_t bucket_idx, page_id_t bucket_page_id) {
-  throw NotImplementedException("ExtendibleHTableDirectoryPage is not implemented");
+  if (bucket_idx >= Size()) {
+    throw Exception("Index out of bounds");
+  }
+
+  bucket_page_ids_[bucket_idx] = bucket_page_id;
 }
 
 auto ExtendibleHTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) const -> uint32_t { return 0; }
