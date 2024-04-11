@@ -108,11 +108,7 @@ void ExtendibleHTableDirectoryPage::SetLocalDepth(uint32_t bucket_idx, uint8_t l
     throw Exception("Index out of bounds");
   }
 
-  if (local_depth <= global_depth_) {
-    local_depths_[bucket_idx] = local_depth;
-  } else {
-    throw Exception(fmt::format("Invalid local depth value: {}", local_depth));
-  }
+  local_depths_[bucket_idx] = local_depth;
 }
 
 void ExtendibleHTableDirectoryPage::IncrLocalDepth(uint32_t bucket_idx) {
