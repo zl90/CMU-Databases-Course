@@ -23,13 +23,14 @@ namespace bustub {
 
 void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth) {
   max_depth_ = max_depth;
+  global_depth_ = 0;
 
-  for (auto &item : bucket_page_ids_) {
-    item = INVALID_PAGE_ID;
+  for (auto &bucket_page_id : bucket_page_ids_) {
+    bucket_page_id = INVALID_PAGE_ID;
   }
 
-  for (auto &item : local_depths_) {
-    item = 1;
+  for (auto &local_depth : local_depths_) {
+    local_depth = 0;
   }
 }
 
@@ -68,11 +69,9 @@ void ExtendibleHTableDirectoryPage::IncrGlobalDepth() {
 }
 
 void ExtendibleHTableDirectoryPage::DecrGlobalDepth() {
-  if (global_depth_ > 1) {
+  if (CanShrink()) {
     global_depth_ -= 1;
   }
-
-  // @TODO: Make sure there are no local_depths_ that are now larger than global_depth_
 }
 
 auto ExtendibleHTableDirectoryPage::CanShrink() -> bool {
@@ -80,14 +79,8 @@ auto ExtendibleHTableDirectoryPage::CanShrink() -> bool {
     return false;
   }
 
-  bool can_shrink = true;
-
-  for (const auto &local_depth : local_depths_) {
-    if (local_depth == global_depth_) {
-      can_shrink = false;
-      break;
-    }
-  }
+  bool can_shrink = std::all_of(local_depths_, local_depths_ + Size(),
+                                [this](auto local_depth) { return local_depth < global_depth_; });
 
   return can_shrink;
 }
@@ -137,7 +130,7 @@ void ExtendibleHTableDirectoryPage::DecrLocalDepth(uint32_t bucket_idx) {
     throw Exception("Index out of bounds");
   }
 
-  if (local_depths_[bucket_idx] > 1) {
+  if (local_depths_[bucket_idx] > 0) {
     local_depths_[bucket_idx] -= 1;
   }
 }
