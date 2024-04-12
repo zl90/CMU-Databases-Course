@@ -34,9 +34,7 @@ void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth) {
   }
 }
 
-auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> uint32_t {
-  return hash >> ((sizeof(hash) * 8) - max_depth_);
-}
+auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> uint32_t { return hash % Size(); }
 
 auto ExtendibleHTableDirectoryPage::GetBucketPageId(uint32_t bucket_idx) const -> page_id_t {
   if (bucket_idx >= Size()) {
