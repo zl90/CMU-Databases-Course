@@ -63,6 +63,11 @@ auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t { return 
 void ExtendibleHTableDirectoryPage::IncrGlobalDepth() {
   if (global_depth_ < max_depth_) {
     global_depth_ += 1;
+
+    for (auto i = (Size() / 2); i < Size(); i++) {
+      local_depths_[i] = local_depths_[i - (Size() / 2)];
+      bucket_page_ids_[i] = bucket_page_ids_[i - (Size() / 2)];
+    }
   }
 }
 
