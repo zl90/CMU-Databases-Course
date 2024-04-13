@@ -34,7 +34,9 @@ void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth) {
   }
 }
 
-auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> uint32_t { return hash % Size(); }
+auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> uint32_t {
+  return hash & GetGlobalDepthMask();
+}
 
 auto ExtendibleHTableDirectoryPage::GetBucketPageId(uint32_t bucket_idx) const -> page_id_t {
   if (bucket_idx >= Size()) {
@@ -52,11 +54,19 @@ void ExtendibleHTableDirectoryPage::SetBucketPageId(uint32_t bucket_idx, page_id
   bucket_page_ids_[bucket_idx] = bucket_page_id;
 }
 
-auto ExtendibleHTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) const -> uint32_t { return 0; }
+auto ExtendibleHTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) const -> uint32_t {
+  uint32_t split_idx = bucket_idx ^ (1 << (local_depths_[bucket_idx] - 1));
+  return split_idx;
+}
+auto ExtendibleHTableDirectoryPage::GetGlobalDepthMask() const -> uint32_t { return (1 << (global_depth_)) - 1; }
 
-auto ExtendibleHTableDirectoryPage::GetGlobalDepthMask() const -> uint32_t { return 0; }
+auto ExtendibleHTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx) const -> uint32_t {
+  if (bucket_idx >= Size()) {
+    throw Exception("Index out of bounds");
+  }
 
-auto ExtendibleHTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx) const -> uint32_t { return 0; }
+  return (1 << (local_depths_[bucket_idx])) - 1;
+}
 
 auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t { return global_depth_; }
 
