@@ -106,32 +106,44 @@ void ExtendibleHTableBucketPage<K, V, KC>::RemoveAt(uint32_t bucket_idx) {
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::KeyAt(uint32_t bucket_idx) const -> K {
-  return {};
+  if (bucket_idx >= size_) {
+    throw Exception("Index out of bounds");
+  }
+
+  return array_[bucket_idx].first;
 }
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::ValueAt(uint32_t bucket_idx) const -> V {
-  return {};
+  if (bucket_idx >= size_) {
+    throw Exception("Index out of bounds");
+  }
+
+  return array_[bucket_idx].second;
 }
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::EntryAt(uint32_t bucket_idx) const -> const std::pair<K, V> & {
-  return array_[0];
+  if (bucket_idx >= size_) {
+    throw Exception("Index out of bounds");
+  }
+
+  return array_[bucket_idx];
 }
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Size() const -> uint32_t {
-  return 0;
+  return size_;
 }
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::IsFull() const -> bool {
-  return false;
+  return size_ == max_size_;
 }
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::IsEmpty() const -> bool {
-  return false;
+  return size_ == 0;
 }
 
 template class ExtendibleHTableBucketPage<int, int, IntComparator>;
