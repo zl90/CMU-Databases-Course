@@ -70,12 +70,38 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, 
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Remove(const K &key, const KC &cmp) -> bool {
+  bool key_found = false;
+  uint32_t index_to_remove = 0;
+
+  for (uint32_t i = 0; i < size_; i++) {
+    auto array_key = array_[i].first;
+
+    if (cmp(array_key, key) == 0) {
+      key_found = true;
+      index_to_remove = i;
+      break;
+    }
+  }
+
+  if (key_found) {
+    RemoveAt(index_to_remove);
+    return true;
+  }
+
   return false;
 }
 
 template <typename K, typename V, typename KC>
 void ExtendibleHTableBucketPage<K, V, KC>::RemoveAt(uint32_t bucket_idx) {
-  throw NotImplementedException("ExtendibleHTableBucketPage not implemented");
+  if (bucket_idx >= size_) {
+    throw Exception("Index out of bounds");
+  }
+
+  for (uint32_t i = bucket_idx + 1; i < size_; i++) {
+    array_[i - 1] = array_[i];
+  }
+
+  size_--;
 }
 
 template <typename K, typename V, typename KC>
