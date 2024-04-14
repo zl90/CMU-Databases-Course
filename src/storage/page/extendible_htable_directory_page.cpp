@@ -55,9 +55,9 @@ void ExtendibleHTableDirectoryPage::SetBucketPageId(uint32_t bucket_idx, page_id
 }
 
 auto ExtendibleHTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) const -> uint32_t {
-  uint32_t split_idx = bucket_idx ^ (1 << (local_depths_[bucket_idx] - 1));
-  return split_idx;
+  return bucket_idx ^ (1 << (local_depths_[bucket_idx] - 1));
 }
+
 auto ExtendibleHTableDirectoryPage::GetGlobalDepthMask() const -> uint32_t { return (1 << (global_depth_)) - 1; }
 
 auto ExtendibleHTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx) const -> uint32_t {

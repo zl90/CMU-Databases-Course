@@ -31,6 +31,31 @@
 namespace bustub {
 
 // NOLINTNEXTLINE
+TEST(ExtendibleHTableTest, BucketPageInsertLookupTest) {
+  auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_unique<BufferPoolManager>(5, disk_mgr.get());
+
+  page_id_t bucket_page_id = INVALID_PAGE_ID;
+  {
+    BasicPageGuard guard = bpm->NewPageGuarded(&bucket_page_id);
+    auto bucket_page = guard.AsMut<ExtendibleHTableBucketPage<GenericKey<8>, RID, GenericComparator<8>>>();
+    bucket_page->Init(10);
+
+    auto key_schema = ParseCreateStatement("a bigint");
+    GenericComparator<8> comparator(key_schema.get());
+    GenericKey<8> index_key;
+    RID rid;
+
+    // insert a few (key, value) pairs
+    for (int64_t i = 0; i < 10; i++) {
+      index_key.SetFromInteger(i);
+      rid.Set(i, i);
+      ASSERT_TRUE(bucket_page->Insert(index_key, rid, comparator));
+      ASSERT_TRUE(bucket_page->Lookup(index_key, rid, comparator));
+    }
+  }  // page guard dropped
+}
+
 TEST(ExtendibleHTableTest, DISABLED_BucketPageSampleTest) {
   auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
   auto bpm = std::make_unique<BufferPoolManager>(5, disk_mgr.get());

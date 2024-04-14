@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstdint>
 #include <optional>
 #include <utility>
 
@@ -26,12 +27,45 @@ void ExtendibleHTableBucketPage<K, V, KC>::Init(uint32_t max_size) {
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Lookup(const K &key, V &value, const KC &cmp) const -> bool {
+  for (uint32_t i = 0; i < size_; i++) {
+    auto array_key = array_[i].first;
+    auto array_value = array_[i].second;
+
+    if (cmp(array_key, key) == 0) {
+      value = array_value;
+      return true;
+    }
+  }
+
   return false;
 }
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, const KC &cmp) -> bool {
-  return false;
+  if (size_ >= max_size_) {
+    return false;
+  }
+
+  bool key_already_exists = false;
+
+  for (uint32_t i = 0; i < size_; i++) {
+    auto array_key = array_[i].first;
+
+    if (cmp(array_key, key) == 0) {
+      key_already_exists = true;
+      break;
+    }
+  }
+
+  if (key_already_exists) {
+    return false;
+  }
+
+  size_++;
+  array_[size_ - 1].first = key;
+  array_[size_ - 1].second = value;
+
+  return true;
 }
 
 template <typename K, typename V, typename KC>
