@@ -94,7 +94,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Remove(const K &key, const KC &cmp) -
 template <typename K, typename V, typename KC>
 void ExtendibleHTableBucketPage<K, V, KC>::RemoveAt(uint32_t bucket_idx) {
   if (bucket_idx >= size_) {
-    throw Exception("Index out of bounds");
+    throw Exception("RemoveAt: Index out of bounds");
   }
 
   for (uint32_t i = bucket_idx + 1; i < size_; i++) {
@@ -107,7 +107,7 @@ void ExtendibleHTableBucketPage<K, V, KC>::RemoveAt(uint32_t bucket_idx) {
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::KeyAt(uint32_t bucket_idx) const -> K {
   if (bucket_idx >= size_) {
-    throw Exception("Index out of bounds");
+    throw Exception("KeyAt: Index out of bounds");
   }
 
   return array_[bucket_idx].first;
@@ -116,7 +116,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::KeyAt(uint32_t bucket_idx) const -> K
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::ValueAt(uint32_t bucket_idx) const -> V {
   if (bucket_idx >= size_) {
-    throw Exception("Index out of bounds");
+    throw Exception("ValueAt: Index out of bounds");
   }
 
   return array_[bucket_idx].second;
@@ -125,7 +125,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::ValueAt(uint32_t bucket_idx) const ->
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::EntryAt(uint32_t bucket_idx) const -> const std::pair<K, V> & {
   if (bucket_idx >= size_) {
-    throw Exception("Index out of bounds");
+    throw Exception("EntryAt: Index out of bounds");
   }
 
   return array_[bucket_idx];
