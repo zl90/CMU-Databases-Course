@@ -40,10 +40,6 @@ auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> ui
 }
 
 auto ExtendibleHTableDirectoryPage::GetBucketPageId(uint32_t bucket_idx) const -> page_id_t {
-  if (bucket_idx >= Size()) {
-    throw Exception("GetBucketPageId: Index out of bounds");
-  }
-
   return bucket_page_ids_[bucket_idx];
 }
 
@@ -56,11 +52,20 @@ void ExtendibleHTableDirectoryPage::SetBucketPageId(uint32_t bucket_idx, page_id
 }
 
 auto ExtendibleHTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) const -> uint32_t {
-  uint32_t shifted = 1 << local_depths_[bucket_idx];
-  return bucket_idx + shifted;
+  uint32_t shifted_bit = 1 << (local_depths_[bucket_idx] - 1);
+
+  if ((bucket_idx + 1) <= (Size() / 2)) {
+    // Add a 1 to the left of the binary representation of bucket_idx
+    // Eg: 100 becomes 1100
+    return bucket_idx + shifted_bit;
+  }
+
+  // Remove the MSB from the binary representation of the bucket_idx
+  // Eg: 1100 becomes 100
+  return bucket_idx - shifted_bit;
 }
 
-auto ExtendibleHTableDirectoryPage::GetGlobalDepthMask() const -> uint32_t { return (1 << (global_depth_)) - 1; }
+auto ExtendibleHTableDirectoryPage::GetGlobalDepthMask() const -> uint32_t { return (1 << global_depth_) - 1; }
 
 auto ExtendibleHTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx) const -> uint32_t {
   if (bucket_idx >= Size()) {
@@ -129,20 +134,12 @@ void ExtendibleHTableDirectoryPage::SetLocalDepth(uint32_t bucket_idx, uint8_t l
 }
 
 void ExtendibleHTableDirectoryPage::IncrLocalDepth(uint32_t bucket_idx) {
-  if (bucket_idx >= Size()) {
-    throw Exception("IncrLocalDepth: Index out of bounds");
-  }
-
-  if (local_depths_[bucket_idx] < global_depth_ && local_depths_[bucket_idx] < max_depth_) {
+  if (local_depths_[bucket_idx] < max_depth_) {
     local_depths_[bucket_idx] += 1;
   }
 }
 
 void ExtendibleHTableDirectoryPage::DecrLocalDepth(uint32_t bucket_idx) {
-  if (bucket_idx >= Size()) {
-    throw Exception("DecrLocalDepth: Index out of bounds");
-  }
-
   if (local_depths_[bucket_idx] > 0) {
     local_depths_[bucket_idx] -= 1;
   }
