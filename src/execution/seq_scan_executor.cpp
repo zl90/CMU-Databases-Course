@@ -30,7 +30,7 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
 void SeqScanExecutor::Init() {}
 
 auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
-  if (table_iterator_->IsEnd()) {
+  if (table_iterator_->IsEnd() || table_iterator_->GetTuple().first.is_deleted_) {
     return false;
   }
 
