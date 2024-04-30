@@ -19,7 +19,7 @@ namespace bustub {
 
 InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {
+    : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)), has_been_called_(false) {
   const auto &oid = plan_->GetTableOid();
   const auto &catalog = exec_ctx_->GetCatalog();
   catalog_ = catalog;
@@ -62,6 +62,11 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
 
   // Return a tuple containing the number of rows inserted
   *tuple = Tuple{values, &GetOutputSchema()};
+
+  if (!has_been_called_) {
+    has_been_called_ = true;
+    return true;
+  }
 
   return !tuples_to_insert.empty();
 }

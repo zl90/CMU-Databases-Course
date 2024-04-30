@@ -24,18 +24,36 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
   const auto &catalog = exec_ctx_->GetCatalog();
   const auto &table_info = catalog->GetTable(oid);
   const auto &table = table_info->table_.get();
+  table_schema_ = &table_info->schema_;
   table_iterator_ = std::make_unique<TableIterator>(table->MakeIterator());
 }
 
 void SeqScanExecutor::Init() {}
 
 auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
-  if (table_iterator_->IsEnd() || table_iterator_->GetTuple().first.is_deleted_) {
+  if (table_iterator_->IsEnd()) {
     return false;
   }
 
-  *tuple = table_iterator_->GetTuple().second;
-  *rid = table_iterator_->GetRID();
+  const auto &tuple_meta = table_iterator_->GetTuple().first;
+  const auto &tuple_object = table_iterator_->GetTuple().second;
+  if (tuple_meta.is_deleted_) {
+    ++(*table_iterator_);
+    return Next(tuple, rid);
+  }
+
+  if (plan_->filter_predicate_ != nullptr) {
+    const auto &tuple_matches_predicate_filter =
+        plan_->filter_predicate_->Evaluate(&tuple_object, *table_schema_).GetAs<bool>();
+
+    if (!tuple_matches_predicate_filter) {
+      ++(*table_iterator_);
+      return Next(tuple, rid);
+    }
+  }
+
+  *tuple = tuple_object;
+  *rid = tuple_object.GetRid();
 
   ++(*table_iterator_);
 
