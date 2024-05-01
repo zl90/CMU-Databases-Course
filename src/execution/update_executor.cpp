@@ -59,7 +59,7 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
       std::vector<Value> values;
       values.reserve(child_executor_->GetOutputSchema().GetColumnCount());
       for (const auto &expr : plan_->target_expressions_) {
-        values.push_back(expr->Evaluate(&child_tuple, child_executor_->GetOutputSchema()));
+        values.push_back(expr->Evaluate(&current_tuple, child_executor_->GetOutputSchema()));
       }
       auto new_tuple = Tuple{values, &child_executor_->GetOutputSchema()};
       auto new_tuple_meta = TupleMeta{0, false};
