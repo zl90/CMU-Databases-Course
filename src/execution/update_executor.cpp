@@ -31,7 +31,7 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   std::unordered_map<RID, Tuple> tuples_to_update;
   std::unordered_map<RID, bool> rids_already_updated;
 
-  // Get the values from the child node
+  // Get the tuples from the child node
   Tuple child_tuple{};
   while (child_executor_->Next(&child_tuple, rid)) {
     tuples_to_update[child_tuple.GetRid()] = child_tuple;
