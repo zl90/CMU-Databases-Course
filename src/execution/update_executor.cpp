@@ -40,6 +40,7 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   auto iterator = table_info_->table_->MakeIterator();
   int num_tuples_updated = 0;
 
+  // Update the table itself
   while (!iterator.IsEnd()) {
     auto current_tuple_meta = iterator.GetTuple().first;
     auto current_tuple = iterator.GetTuple().second;
@@ -53,7 +54,8 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     auto it = tuples_to_update.find(current_rid);
 
     if (it != tuples_to_update.end()) {
-      current_tuple_meta.is_deleted_ = true;
+      // Delete the current Tuple
+      table_info_->table_->UpdateTupleMeta(TupleMeta{0, true}, current_rid);
 
       // Create the new updated tuple
       std::vector<Value> values;
@@ -76,8 +78,30 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     ++iterator;
   }
 
-  // @TODO: update indexes too
   auto indexes = catalog_->GetTableIndexes(table_info_->name_);
+
+  // Update all indexes
+  for (const auto &index_info : indexes) {
+    for (auto current_tuple : tuples_to_update) {
+      // Delete the current tuple from the index
+      index_info->index_->DeleteEntry(current_tuple.second.KeyFromTuple(table_info_->schema_, index_info->key_schema_,
+                                                                        index_info->index_->GetKeyAttrs()),
+                                      current_tuple.first, nullptr);
+
+      // Create the new updated tuple
+      std::vector<Value> values;
+      values.reserve(child_executor_->GetOutputSchema().GetColumnCount());
+      for (const auto &expr : plan_->target_expressions_) {
+        values.push_back(expr->Evaluate(&current_tuple.second, child_executor_->GetOutputSchema()));
+      }
+      auto new_tuple = Tuple{values, &child_executor_->GetOutputSchema()};
+
+      // Insert the new tuple into the index
+      index_info->index_->InsertEntry(
+          new_tuple.KeyFromTuple(table_info_->schema_, index_info->key_schema_, index_info->index_->GetKeyAttrs()),
+          new_tuple.GetRid(), nullptr);
+    }
+  }
 
   std::vector<Value> values{};
   values.reserve(GetOutputSchema().GetColumnCount());
