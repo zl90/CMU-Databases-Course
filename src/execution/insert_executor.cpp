@@ -26,7 +26,10 @@ InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *
   table_info_ = catalog->GetTable(oid);
 }
 
-void InsertExecutor::Init() { child_executor_->Init(); }
+void InsertExecutor::Init() {
+  child_executor_->Init();
+  has_been_called_ = false;
+}
 
 auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   // Get the values from the child node

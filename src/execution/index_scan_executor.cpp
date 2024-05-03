@@ -25,6 +25,7 @@ IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanP
 
 void IndexScanExecutor::Init() {
   rids_to_check_.clear();
+  rid_index_ = 0;
   auto index_info = catalog_->GetIndex(plan_->index_oid_);
   auto key = Tuple{{plan_->pred_key_->val_}, index_info->index_->GetKeySchema()};
   htable_->ScanKey(key, &rids_to_check_, nullptr);

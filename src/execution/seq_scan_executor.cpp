@@ -22,13 +22,11 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
     : AbstractExecutor(exec_ctx), plan_(plan) {
   const auto &oid = plan_->GetTableOid();
   const auto &catalog = exec_ctx_->GetCatalog();
-  const auto &table_info = catalog->GetTable(oid);
-  const auto &table = table_info->table_.get();
-  table_schema_ = &table_info->schema_;
-  table_iterator_ = std::make_unique<TableIterator>(table->MakeIterator());
+  table_info_ = catalog->GetTable(oid);
+  table_schema_ = &table_info_->schema_;
 }
 
-void SeqScanExecutor::Init() {}
+void SeqScanExecutor::Init() { table_iterator_ = std::make_unique<TableIterator>(table_info_->table_->MakeIterator()); }
 
 auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   if (table_iterator_->IsEnd()) {

@@ -25,7 +25,10 @@ DeleteExecutor::DeleteExecutor(ExecutorContext *exec_ctx, const DeletePlanNode *
   table_info_ = catalog->GetTable(oid);
 }
 
-void DeleteExecutor::Init() { child_executor_->Init(); }
+void DeleteExecutor::Init() {
+  has_been_called_ = false;
+  child_executor_->Init();
+}
 
 auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   std::unordered_map<RID, Tuple> tuples_to_delete;

@@ -25,7 +25,10 @@ UpdateExecutor::UpdateExecutor(ExecutorContext *exec_ctx, const UpdatePlanNode *
   table_info_ = catalog->GetTable(oid);
 }
 
-void UpdateExecutor::Init() { child_executor_->Init(); }
+void UpdateExecutor::Init() {
+  child_executor_->Init();
+  has_been_called_ = false;
+}
 
 auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   std::unordered_map<RID, Tuple> tuples_to_update;
