@@ -31,7 +31,12 @@ void UpdateExecutor::Init() {
 }
 
 auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
+  if (has_been_called_) {
+    return false;
+  }
+
   std::unordered_map<RID, Tuple> tuples_to_update;
+  std::vector<std::pair<RID, Tuple>> tuples_updated;
   std::unordered_map<RID, bool> rids_already_updated;
 
   // Get the tuples from the child node
@@ -41,7 +46,6 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   }
 
   auto iterator = table_info_->table_->MakeIterator();
-  int num_tuples_updated = 0;
 
   // Update the table itself
   while (!iterator.IsEnd()) {
@@ -69,13 +73,17 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
       auto new_tuple = Tuple{values, &child_executor_->GetOutputSchema()};
       auto new_tuple_meta = TupleMeta{0, false};
 
-      // Mark the existing tuple and the new tuple as updated (avoids the Halloween Problem)
-      rids_already_updated[current_rid] = true;
-      rids_already_updated[new_tuple.GetRid()] = true;
-
       // Insert the new tuple into the table
-      table_info_->table_->InsertTuple(new_tuple_meta, new_tuple);
-      num_tuples_updated++;
+      auto rid_optional = table_info_->table_->InsertTuple(new_tuple_meta, new_tuple);
+
+      if (rid_optional.has_value()) {
+        // Mark the existing tuple and the new tuple as updated (avoids the Halloween Problem)
+        rids_already_updated[current_rid] = true;
+        rids_already_updated[rid_optional.value()] = true;
+        rids_already_updated[new_tuple.GetRid()] = true;
+
+        tuples_updated.emplace_back(rid_optional.value(), new_tuple);
+      }
     }
 
     ++iterator;
@@ -85,40 +93,36 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
 
   // Update all indexes
   for (const auto &index_info : indexes) {
-    for (auto current_tuple : tuples_to_update) {
+    for (auto [current_rid, current_tuple] : tuples_updated) {
       // Delete the current tuple from the index
-      index_info->index_->DeleteEntry(current_tuple.second.KeyFromTuple(table_info_->schema_, index_info->key_schema_,
-                                                                        index_info->index_->GetKeyAttrs()),
-                                      current_tuple.first, nullptr);
+      index_info->index_->DeleteEntry(
+          current_tuple.KeyFromTuple(table_info_->schema_, index_info->key_schema_, index_info->index_->GetKeyAttrs()),
+          current_tuple.GetRid(), nullptr);
 
       // Create the new updated tuple
       std::vector<Value> values;
       values.reserve(child_executor_->GetOutputSchema().GetColumnCount());
       for (const auto &expr : plan_->target_expressions_) {
-        values.push_back(expr->Evaluate(&current_tuple.second, child_executor_->GetOutputSchema()));
+        values.push_back(expr->Evaluate(&current_tuple, child_executor_->GetOutputSchema()));
       }
       auto new_tuple = Tuple{values, &child_executor_->GetOutputSchema()};
 
       // Insert the new tuple into the index
       index_info->index_->InsertEntry(
           new_tuple.KeyFromTuple(table_info_->schema_, index_info->key_schema_, index_info->index_->GetKeyAttrs()),
-          new_tuple.GetRid(), nullptr);
+          current_rid, nullptr);
     }
   }
 
   std::vector<Value> values{};
   values.reserve(GetOutputSchema().GetColumnCount());
-  values.emplace_back(INTEGER, static_cast<int>(num_tuples_updated));
+  values.emplace_back(INTEGER, static_cast<int>(tuples_updated.size()));
 
   // Return a tuple containing the number of rows inserted
   *tuple = Tuple{values, &GetOutputSchema()};
 
-  if (!has_been_called_) {
-    has_been_called_ = true;
-    return true;
-  }
-
-  return num_tuples_updated != 0;
+  has_been_called_ = true;
+  return true;
 }
 
 }  // namespace bustub

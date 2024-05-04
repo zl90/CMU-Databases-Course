@@ -34,6 +34,7 @@ void InsertExecutor::Init() {
 auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   // Get the values from the child node
   std::vector<Tuple> tuples_to_insert;
+  std::vector<std::pair<RID, Tuple>> new_tuples_inserted;
 
   Tuple child_tuple{};
   while (child_executor_->Next(&child_tuple, rid)) {
@@ -43,7 +44,11 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   // Insert the values into the table itself
   for (const auto &tuple : tuples_to_insert) {
     auto tuple_meta = TupleMeta{0, false};
-    table_info_->table_->InsertTuple(tuple_meta, tuple);
+    auto rid_optional = table_info_->table_->InsertTuple(tuple_meta, tuple);
+
+    if (rid_optional.has_value()) {
+      new_tuples_inserted.emplace_back(rid_optional.value(), tuple);
+    }
   }
 
   auto indexes = catalog_->GetTableIndexes(table_info_->name_);
@@ -52,16 +57,16 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   for (const auto &index_info : indexes) {
     auto index = index_info->index_.get();
 
-    for (auto tuple : tuples_to_insert) {
+    for (auto [new_rid, tuple] : new_tuples_inserted) {
       index->InsertEntry(
-          tuple.KeyFromTuple(table_info_->schema_, index_info->key_schema_, index_info->index_->GetKeyAttrs()),
-          tuple.GetRid(), nullptr);
+          tuple.KeyFromTuple(table_info_->schema_, index_info->key_schema_, index_info->index_->GetKeyAttrs()), new_rid,
+          nullptr);
     }
   }
 
   std::vector<Value> values{};
   values.reserve(GetOutputSchema().GetColumnCount());
-  values.emplace_back(INTEGER, static_cast<int>(tuples_to_insert.size()));
+  values.emplace_back(INTEGER, static_cast<int>(new_tuples_inserted.size()));
 
   // Return a tuple containing the number of rows inserted
   *tuple = Tuple{values, &GetOutputSchema()};
@@ -71,7 +76,7 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     return true;
   }
 
-  return !tuples_to_insert.empty();
+  return !new_tuples_inserted.empty();
 }
 
 }  // namespace bustub
