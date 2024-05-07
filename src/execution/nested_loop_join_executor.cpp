@@ -74,6 +74,8 @@ auto NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   RID right_rid;
   Tuple right_tuple{};
 
+  /* For each tuple in the outer table, consider each tuple in the inner table and emit an output tuple if the join
+   * predicate is satisfied. */
   while (left_tuple_exists_) {
     if (!right_executor_->Next(&right_tuple, &right_rid)) {
       if (plan_->GetJoinType() == JoinType::LEFT && !is_left_tuple_matched_with_right_tuple_) {
