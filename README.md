@@ -10,3 +10,6 @@ My video recording: https://youtu.be/oWVoy7hMIUY?si=DchDgH11Bh4gTuku
 
 ## Assignment 2 - Extendible Hash Table
 My video recording: https://www.youtube.com/watch?v=YeQJ1iMmYt8
+
+## Assignment 3 - SQL Query Executors
+My video recording: https://youtu.be/RiwJEOazrFM
